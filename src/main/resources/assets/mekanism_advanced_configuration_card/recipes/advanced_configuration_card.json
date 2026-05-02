@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " E ",
+    "SCS",
+    " E "
+  ],
+  "key": {
+    "C": {
+      "item": "mekanism:configurationcard"
+    },
+    "S": {
+      "item": "mekanism:hdpe_sheet"
+    },
+    "E": {
+      "item": "mekanism:energytablet"
+    }
+  },
+  "result": {
+    "item": "mekanism_advanced_configuration_card:advanced_configuration_card",
+    "count": 1
+  }
+}

@@ -1,0 +1,89 @@
+buildscript {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net/' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:3.+'
+    }
+}
+        
+apply plugin: 'net.minecraftforge.gradle'
+apply plugin: 'eclipse'
+apply plugin: 'maven-publish'
+
+version = '1.0.0'
+group = 'com.Nyonio.mekanism_advanced_configuration_card'
+archivesBaseName = 'mekanism_advanced_configuration_card-1.12.2'
+
+sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8'
+
+minecraft {
+    mappings channel: 'snapshot', version: '20171003-1.12'
+    
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+            property 'forge.logging.console.level', 'debug'
+        }
+
+        server {
+            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+            property 'forge.logging.console.level', 'debug'
+        }
+    }
+}
+
+repositories {
+    maven { url = 'https://maven.minecraftforge.net/' }
+    mavenCentral()
+    maven { url = 'https://maven.cil.li/' }
+    maven { url = 'https://cursemaven.com/' }
+    flatDir {
+        dirs 'libs'
+    }
+}
+
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.12.2-14.23.5.2859'
+    
+    compile files('libs/Mekanism-CE-1.12.2-deobf.jar')
+    compileOnly files('libs/BaublesEX-1.12.2-2.3.5.jar')
+    compile 'curse.maven:redstone-flux-270789:2920436'
+    compile 'curse.maven:industrial-craft-242638:3838713'
+}
+
+jar {
+    manifest {
+        attributes([
+            "Specification-Title": "mekanism_advanced_configuration_card",
+            "Specification-Vendor": "Nyonio",
+            "Specification-Version": "1",
+            "Implementation-Title": project.name,
+            "Implementation-Version": "${version}",
+            "Implementation-Vendor" :"Nyonio",
+            "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+}
+
+task copyToMods(type: Copy, dependsOn: jar) {
+    from jar.archivePath
+    into 'D:/pcl2/.minecraft/versions/1.12.2-Forge_14.23.5.2864/mods'
+}
+
+build.finalizedBy copyToMods 
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifact jar
+        }
+    }
+    repositories {
+        maven {
+            url "file:///${project.projectDir}/mcmodsrepo"
+        }
+    }
+}
