@@ -1,4 +1,4 @@
-﻿# 通用机械高级配置卡 / Mekanism Advanced Configuration Card
+# 通用机械高级配置卡 / Mekanism Advanced Configuration Card
 
 ![](src/main/resources/assets/mekanism_advanced_configuration_card/textures/item/card_slot_bag.png)
 
@@ -13,7 +13,7 @@
 
 这是一个 Minecraft 1.12.2 的 Forge 模组，为 Mekanism CE Unofficial 添加了增强版配置卡功能。
 
-**本模组是 [Mekanism Config Card Upgrades](https://www.curseforge.com/minecraft/mc-mods/mekanism-config-card-upgrades) 的 1.12.2 移植版本，并添加了更多功能。**
+**灵感来源于 [Mekanism Config Card Upgrades](https://www.curseforge.com/minecraft/mc-mods/mekanism-config-card-upgrades)。**
 
 ### 功能特性
 
@@ -70,7 +70,7 @@
 
 A Minecraft 1.12.2 Forge mod that adds an advanced configuration card for Mekanism CE Unofficial.
 
-**This mod is a 1.12.2 port of Mekanism Config Card Upgrades with additional features.**
+**Inspired by [Mekanism Config Card Upgrades](https://www.curseforge.com/minecraft/mc-mods/mekanism-config-card-upgrades).**
 
 ### Features
 
@@ -118,6 +118,6 @@ A Minecraft 1.12.2 Forge mod that adds an advanced configuration card for Mekani
 
 ## Credits
 
-- Original mod: Mekanism Config Card Upgrades
+- Inspired by: Mekanism Config Card Upgrades
 - Mekanism CE Unofficial
 - Author: Nyonio
