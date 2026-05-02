@@ -11,7 +11,7 @@
 
 ### 简介
 
-这是一个 Minecraft 1.12.2 的 Forge 模组，为 Mekanism CE Unofficial 添加了增强版配置卡功能。
+这是一个 Minecraft 1.12.2 的 Forge 模组，添加了 高级配置卡。
 
 **灵感来源于 [Mekanism Config Card Upgrades](https://www.curseforge.com/minecraft/mc-mods/mekanism-config-card-upgrades)。**
 
@@ -68,7 +68,7 @@
 
 ### Introduction
 
-A Minecraft 1.12.2 Forge mod that adds an advanced configuration card for Mekanism CE Unofficial.
+A Minecraft 1.12.2 Forge mod that added an advanced configuration card.
 
 **Inspired by [Mekanism Config Card Upgrades](https://www.curseforge.com/minecraft/mc-mods/mekanism-config-card-upgrades).**
 
