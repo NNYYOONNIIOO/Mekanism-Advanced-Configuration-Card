@@ -2,6 +2,7 @@ package com.Nyonio.mekanism_advanced_configuration_card.item;
 
 import com.Nyonio.mekanism_advanced_configuration_card.MekConfigCardUpgradesMod;
 import com.Nyonio.mekanism_advanced_configuration_card.compat.BaublesCompat;
+import com.Nyonio.mekanism_advanced_configuration_card.compat.InfiniteUpgradeCardCompat;
 import com.Nyonio.mekanism_advanced_configuration_card.compat.MoreMachineCompat;
 import com.Nyonio.mekanism_advanced_configuration_card.gui.GuiHandler;
 import mekanism.common.Mekanism;
@@ -54,6 +55,11 @@ public class ItemCardSlotBag extends Item {
                 if (path.equals("compositetierinstaller") || path.contains("tierinstaller")) {
                     return true;
                 }
+            }
+        }
+        if (InfiniteUpgradeCardCompat.isInfiniteUpgradeCardLoaded()) {
+            if (item == InfiniteUpgradeCardCompat.getInfiniteUpgradeItem() || item == InfiniteUpgradeCardCompat.getSuperInfiniteUpgradeItem() || item == InfiniteUpgradeCardCompat.getInfiniteFactoryInstallerItem()) {
+                return true;
             }
         }
         return false;

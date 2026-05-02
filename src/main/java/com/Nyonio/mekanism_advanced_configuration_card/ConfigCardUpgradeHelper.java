@@ -1,6 +1,7 @@
 package com.Nyonio.mekanism_advanced_configuration_card;
 
 import com.Nyonio.mekanism_advanced_configuration_card.compat.BaublesCompat;
+import com.Nyonio.mekanism_advanced_configuration_card.compat.InfiniteUpgradeCardCompat;
 import com.Nyonio.mekanism_advanced_configuration_card.compat.MoreMachineCompat;
 import com.Nyonio.mekanism_advanced_configuration_card.item.ItemAdvancedConfigurationCard;
 import com.Nyonio.mekanism_advanced_configuration_card.item.ItemCardSlotBag;
@@ -513,6 +514,9 @@ public final class ConfigCardUpgradeHelper {
         if (player.isCreative()) {
             return null;
         }
+        if (InfiniteUpgradeCardCompat.hasInfiniteFactoryInstaller(player)) {
+            return null;
+        }
         if (!(tile instanceof ITierUpgradeable)) {
             return null;
         }
@@ -612,6 +616,9 @@ public final class ConfigCardUpgradeHelper {
         if (player.isCreative()) {
             return null;
         }
+        if (InfiniteUpgradeCardCompat.hasInfiniteFactoryInstaller(player)) {
+            return null;
+        }
         int currentTierOrdinal = targetFactory.tier.ordinal();
         
         if (targetTierOrdinal <= currentTierOrdinal) {
@@ -671,6 +678,9 @@ public final class ConfigCardUpgradeHelper {
             return null;
         }
         if (player.isCreative()) {
+            return null;
+        }
+        if (InfiniteUpgradeCardCompat.hasInfiniteFactoryInstaller(player)) {
             return null;
         }
         if (!MoreMachineCompat.canInstall(tile)) {
@@ -864,6 +874,9 @@ public final class ConfigCardUpgradeHelper {
         if (!tile.supportsUpgrades()) {
             return null;
         }
+        if (InfiniteUpgradeCardCompat.hasAnyInfiniteUpgrade(player)) {
+            return null;
+        }
         TileComponentUpgrade component = tile.getComponent();
         Map<Upgrade, Integer> desired = getStoredUpgrades(data);
         InventorySimulation inventory = new InventorySimulation(player.inventory);
@@ -893,6 +906,9 @@ public final class ConfigCardUpgradeHelper {
 
     public static String validateFuzzyPaste(EntityPlayer player, IUpgradeTile tile, NBTTagCompound data) {
         if (!tile.supportsUpgrades()) {
+            return null;
+        }
+        if (InfiniteUpgradeCardCompat.hasAnyInfiniteUpgrade(player)) {
             return null;
         }
         TileComponentUpgrade component = tile.getComponent();
@@ -936,6 +952,9 @@ public final class ConfigCardUpgradeHelper {
 
     public static void consumeUpgradeItems(EntityPlayer player, IUpgradeTile tile, NBTTagCompound data) {
         if (!tile.supportsUpgrades() || player.isCreative()) {
+            return;
+        }
+        if (InfiniteUpgradeCardCompat.hasAnyInfiniteUpgrade(player)) {
             return;
         }
         TileComponentUpgrade component = tile.getComponent();
