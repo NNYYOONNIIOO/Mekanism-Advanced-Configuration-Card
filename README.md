@@ -18,11 +18,10 @@
 ### 功能特性
 
 #### 高级配置卡
-- **复制升级数据**：复制机器时同时保存升级卡数据（速度升级、能量升级等）
-- **复制工厂等级**：支持复制工厂等级到其他机器，自动消耗工厂安装器进行升级
-- **跨机器粘贴**：支持从工厂复制配置到普通机器，或从普通机器复制到工厂
-- **超量升级支持**：支持保存和粘贴超出常规上限的升级数量（可通过配置关闭）
-- **清除数据**：潜行+右键空气或非机械方块可清除配置卡数据
+- 跨机器复制配置；
+- 复制升级；
+- 复制等级；
+- 复制为空时，返还升级。
 
 #### 卡槽包
 - 用于存储升级卡和工厂安装器
@@ -75,11 +74,10 @@ A Minecraft 1.12.2 Forge mod that added an advanced configuration card.
 ### Features
 
 #### Advanced Configuration Card
-- **Copy Upgrade Data**: Saves upgrade cards when copying machine configuration
-- **Copy Factory Tier**: Supports copying factory tier to other machines
-- **Cross-Machine Paste**: Supports pasting from factory to regular machines and vice versa
-- **Excess Upgrades Support**: Supports saving and pasting upgrades beyond the normal limit
-- **Clear Data**: Sneak + right-click on air or non-machine blocks to clear card data
+- Cross-machine copy configuration;
+- Copy upgrade;
+- Copy level;
+- When the copy is empty, return the upgrade.
 
 #### Card Slot Bag
 - Stores upgrade cards and tier installers
