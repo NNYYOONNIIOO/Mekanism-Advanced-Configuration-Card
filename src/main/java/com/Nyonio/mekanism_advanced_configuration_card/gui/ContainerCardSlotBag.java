@@ -34,28 +34,22 @@ public class ContainerCardSlotBag extends Container {
         
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                int slotIndex = col + row * 9 + 9;
-                addSlotToContainer(new Slot(playerInventory, slotIndex, 8 + col * 18, 84 + row * 18) {
+                int playerSlotIndex = col + row * 9 + 9;
+                addSlotToContainer(new Slot(playerInventory, playerSlotIndex, 8 + col * 18, 84 + row * 18) {
                     @Override
                     public boolean canTakeStack(EntityPlayer player) {
-                        if (slotIndex == bagSlotIndex) {
-                            return false;
-                        }
-                        return super.canTakeStack(player);
+                        return playerSlotIndex != bagSlotIndex;
                     }
                 });
             }
         }
         
         for (int col = 0; col < 9; col++) {
-            int slotIndex = col;
-            addSlotToContainer(new Slot(playerInventory, slotIndex, 8 + col * 18, 142) {
+            int playerSlotIndex = col;
+            addSlotToContainer(new Slot(playerInventory, playerSlotIndex, 8 + col * 18, 142) {
                 @Override
                 public boolean canTakeStack(EntityPlayer player) {
-                    if (slotIndex == bagSlotIndex) {
-                        return false;
-                    }
-                    return super.canTakeStack(player);
+                    return playerSlotIndex != bagSlotIndex;
                 }
             });
         }
@@ -91,15 +85,14 @@ public class ContainerCardSlotBag extends Container {
             if (hotbarSlot == bagSlotIndex) {
                 return ItemStack.EMPTY;
             }
-            if (slotId >= 27 && slotId < 63) {
-                int playerSlotIndex = slotId - 27;
-                if (playerSlotIndex == bagSlotIndex) {
-                    return ItemStack.EMPTY;
-                }
-            }
         }
         if (slotId >= 27 && slotId < 63) {
-            int playerSlotIndex = slotId - 27;
+            int playerSlotIndex;
+            if (slotId < 54) {
+                playerSlotIndex = (slotId - 27) + 9;
+            } else {
+                playerSlotIndex = slotId - 54;
+            }
             if (playerSlotIndex == bagSlotIndex) {
                 return ItemStack.EMPTY;
             }

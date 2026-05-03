@@ -26,7 +26,7 @@ import org.apache.logging.log4j.Logger;
 public class MekConfigCardUpgradesMod {
     public static final String MOD_ID = "mekanism_advanced_configuration_card";
     public static final String NAME = "Mekanism Advanced Configuration Card";
-    public static final String VERSION = "1.0.1";
+    public static final String VERSION = "1.0.2";
     public static final Logger LOGGER = LogManager.getLogger(MOD_ID);
 
     @Mod.Instance(MOD_ID)
