@@ -1,6 +1,8 @@
 item.mekanism_advanced_configuration_card.card_slot_bag.name=卡槽包
 item.mekanism_advanced_configuration_card.advanced_configuration_card.name=高级配置卡
 
+mekanism_advanced_configuration_card.card_slot_bag.title=卡槽包
+
 mode.mekanism_advanced_configuration_card.copy=拷贝模式
 
 tooltip.mekanism_advanced_configuration_card.advanced_configuration_card.blank=空白
@@ -30,3 +32,8 @@ message.mekanism_advanced_configuration_card.invalid_config_data=无效的配置
 message.mekanism_advanced_configuration_card.no_upgrades_to_remove=目标没有可移除的升级
 message.mekanism_advanced_configuration_card.cannot_upgrade=无法升级此机器
 message.mekanism_advanced_configuration_card.card_cleared=配置卡已清除
+tooltip.mekanism_advanced_configuration_card.advanced_configuration_card.network_linked=已链接
+tooltip.mekanism_advanced_configuration_card.advanced_configuration_card.network_unlinked=未链接
+
+mekanism_advanced_configuration_card.button.upgrade_all=一键升级
+mekanism_advanced_configuration_card.button.unload_all=一键卸载
