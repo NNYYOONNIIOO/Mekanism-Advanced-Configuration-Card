@@ -1,0 +1,6 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "mekanism_advanced_configuration_card:item/advanced_configuration_card"
+  }
+}

@@ -1,0 +1,95 @@
+buildscript {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net/' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:3.+'
+    }
+}
+        
+apply plugin: 'net.minecraftforge.gradle'
+apply plugin: 'eclipse'
+apply plugin: 'maven-publish'
+
+version = '1.0.3.1'
+group = 'com.Nyonio.mekanism_advanced_configuration_card'
+archivesBaseName = 'mekanism_advanced_configuration_card-1.12.2'
+
+sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8'
+
+minecraft {
+    mappings channel: 'snapshot', version: '20171003-1.12'
+    
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+            property 'forge.logging.console.level', 'debug'
+        }
+
+        server {
+            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+            property 'forge.logging.console.level', 'debug'
+        }
+    }
+}
+
+repositories {
+    maven { url = 'https://maven.minecraftforge.net/' }
+    mavenCentral()
+    maven { url = 'https://maven.cil.li/' }
+    maven { url = 'https://cursemaven.com/' }
+    maven { url = 'https://repo.spongepowered.org/maven/' }
+    maven { url = 'https://modmaven.k-4u.nl/' }
+    flatDir {
+        dirs 'libs'
+    }
+}
+
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.12.2-14.23.5.2859'
+    
+    compile 'curse.maven:mekanism-ce-unofficial-840735:7966589'
+    compile files('libs/MekanismCeU-MoreMachine-1.4.0.jar')
+    compileOnly 'curse.maven:baubles-227083:2518667'
+    compileOnly 'curse.maven:ae2-uel-570458:4623763'
+    compileOnly 'curse.maven:jei-238222:5101333'
+    compileOnly 'curse.maven:inventory-tweaks-223094:2482481'
+    compileOnly 'curse.maven:redstone-flux-270789:2920436'
+    compileOnly 'curse.maven:industrial-craft-242638:3838713'
+}
+
+jar {
+    manifest {
+        attributes([
+            "Specification-Title": "mekanism_advanced_configuration_card",
+            "Specification-Vendor": "Nyonio",
+            "Specification-Version": "1",
+            "Implementation-Title": project.name,
+            "Implementation-Version": "${version}",
+            "Implementation-Vendor" :"Nyonio",
+            "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+}
+
+task copyToMods(type: Copy, dependsOn: jar) {
+    from jar.archivePath
+    into 'D:/pcl2/.minecraft/versions/1.12.2-Forge_14.23.5.2864/mods'
+}
+
+build.finalizedBy copyToMods 
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifact jar
+        }
+    }
+    repositories {
+        maven {
+            url "file:///${project.projectDir}/mcmodsrepo"
+        }
+    }
+}

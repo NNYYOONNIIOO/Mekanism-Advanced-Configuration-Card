@@ -1,0 +1,38 @@
+# Build outputs
+/build/
+/bin/
+/out/
+/.gradle/
+/run/
+
+# IDE files
+/.idea/
+/*.iml
+/*.ipr
+/*.iws
+/.vscode/
+/.settings/
+/.classpath
+/.project
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# GitHub source reference
+/GitHub/
+
+# Other unnecessary files
+/mezz/
+/temp_jar/
+*.zip
+
+# Duplicate files in src/
+/src/.github/
+/src/gradle/
+/src/LICENSE
+/src/README.md
+/src/build.gradle
+/src/gradle.properties
+/src/gradlew
+/src/gradlew.bat
