@@ -76,7 +76,10 @@ jar {
 
 task copyToMods(type: Copy, dependsOn: jar) {
     from jar.archivePath
-    into 'D:/pcl2/.minecraft/versions/1.12.2-Forge_14.23.5.2864/mods'
+    def modsDir = file('D:/pcl2/.minecraft/versions/1.12.2-Forge_14.23.5.2864/mods')
+    if (modsDir.exists()) {
+        into modsDir
+    }
 }
 
 build.finalizedBy copyToMods 
