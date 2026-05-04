@@ -2,6 +2,7 @@ package com.nyonio.mekanism_advanced_configuration_card.network;
 
 import com.nyonio.mekanism_advanced_configuration_card.MekConfigCardUpgradesMod;
 import com.nyonio.mekanism_advanced_configuration_card.compat.BaublesCompat;
+import com.nyonio.mekanism_advanced_configuration_card.event.GuiEventHandler;
 import com.nyonio.mekanism_advanced_configuration_card.item.ItemCardSlotBag;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
@@ -50,6 +51,7 @@ public class PacketSyncBagContents implements IMessageHandler<PacketSyncBagConte
                 MekConfigCardUpgradesMod.LOGGER.info("[SyncBag] Updated bag NBT. Old tag: {}, New tag: {}", 
                     oldTag != null ? oldTag.toString().substring(0, Math.min(100, oldTag.toString().length())) + "..." : "null",
                     message.tagCompound != null ? message.tagCompound.toString().substring(0, Math.min(100, message.tagCompound.toString().length())) + "..." : "null");
+                GuiEventHandler.scheduleRefresh();
             } else {
                 MekConfigCardUpgradesMod.LOGGER.warn("[SyncBag] Target stack is not a bag or is null!");
             }

@@ -12,6 +12,7 @@ import mekanism.common.base.IUpgradeTile;
 import mekanism.common.tile.prefab.TileEntityBasicBlock;
 import mekanism.common.util.MekanismUtils;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
@@ -20,13 +21,14 @@ import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import net.minecraftforge.items.ItemStackHandler;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class PacketRemoveUpgradeModded implements IMessageHandler<PacketRemoveUpgradeModded.RemoveUpgradeModdedMessage, IMessage> {
 
     @Override
     public IMessage onMessage(RemoveUpgradeModdedMessage message, MessageContext context) {
-        EntityPlayer player = context.getServerHandler().player;
+        EntityPlayerMP player = context.getServerHandler().player;
         if (player == null) {
             return null;
         }
@@ -71,6 +73,7 @@ public class PacketRemoveUpgradeModded implements IMessageHandler<PacketRemoveUp
             }
 
             List<ModConfig.SourcePriority> priorities = ModConfig.getUpgradeReturnPriorityList();
+            List<BagRef> modifiedBags = new ArrayList<>();
 
             for (ModConfig.SourcePriority priority : priorities) {
                 if (remaining <= 0) break;
@@ -84,7 +87,7 @@ public class PacketRemoveUpgradeModded implements IMessageHandler<PacketRemoveUp
                         }
                         break;
                     case CARD_SLOT_BAG:
-                        remaining = insertToCardSlotBags(player, upgradeStack, remaining);
+                        remaining = insertToCardSlotBags(player, upgradeStack, remaining, modifiedBags);
                         break;
                     case PLAYER_INVENTORY:
                         if (remaining > 0) {
@@ -110,6 +113,10 @@ public class PacketRemoveUpgradeModded implements IMessageHandler<PacketRemoveUp
                 }
             }
 
+            for (BagRef bagRef : modifiedBags) {
+                syncBagToClient(player, bagRef);
+            }
+
             player.inventoryContainer.detectAndSendChanges();
         });
 
@@ -120,7 +127,7 @@ public class PacketRemoveUpgradeModded implements IMessageHandler<PacketRemoveUp
         return mekanism.common.PacketHandler.canAccessTile(player, tile);
     }
 
-    private int insertToCardSlotBags(EntityPlayer player, ItemStack upgradeStack, int remaining) {
+    private int insertToCardSlotBags(EntityPlayer player, ItemStack upgradeStack, int remaining, List<BagRef> modifiedBags) {
         for (int i = 0; i < player.inventory.mainInventory.size() && remaining > 0; i++) {
             ItemStack bagStack = player.inventory.mainInventory.get(i);
             if (ItemCardSlotBag.isBag(bagStack)) {
@@ -135,12 +142,49 @@ public class PacketRemoveUpgradeModded implements IMessageHandler<PacketRemoveUp
                     }
                 }
                 ItemCardSlotBag.writeHandler(bagStack, handler);
+                modifiedBags.add(new BagRef(bagStack, i, false));
             }
         }
         if (remaining > 0 && BaublesCompat.isBaublesLoaded()) {
-            remaining = BaublesCompat.giveToBaublesBags(player, upgradeStack, remaining);
+            int slot = BaublesCompat.findFirstBagSlot(player);
+            if (slot >= 0) {
+                ItemStack bagStack = BaublesCompat.getStackInSlot(player, slot);
+                if (ItemCardSlotBag.isBag(bagStack)) {
+                    ItemStackHandler handler = ItemCardSlotBag.readHandler(bagStack);
+                    for (int s = 0; s < handler.getSlots() && remaining > 0; s++) {
+                        ItemStack toInsert = ItemCardSlotBag.copyStackWithSize(upgradeStack, remaining);
+                        ItemStack result = handler.insertItem(s, toInsert, false);
+                        if (result.isEmpty()) {
+                            remaining = 0;
+                        } else {
+                            remaining = result.getCount();
+                        }
+                    }
+                    ItemCardSlotBag.writeHandler(bagStack, handler);
+                    modifiedBags.add(new BagRef(bagStack, slot, true));
+                }
+            }
         }
         return remaining;
+    }
+
+    private void syncBagToClient(EntityPlayerMP player, BagRef bagRef) {
+        if (bagRef == null || bagRef.stack == null) return;
+        NBTTagCompound tag = bagRef.stack.getTagCompound();
+        if (tag == null) tag = new NBTTagCompound();
+        int source = bagRef.isBaubles ? PacketSyncBagContents.SOURCE_BAUBLES : PacketSyncBagContents.SOURCE_MAIN;
+        PacketHandler.getNetwork().sendTo(new PacketSyncBagContents.SyncBagMessage(source, bagRef.slot, tag), player);
+    }
+
+    private static class BagRef {
+        final ItemStack stack;
+        final int slot;
+        final boolean isBaubles;
+        BagRef(ItemStack stack, int slot, boolean isBaubles) {
+            this.stack = stack;
+            this.slot = slot;
+            this.isBaubles = isBaubles;
+        }
     }
 
     private ItemStack findBoundConfigCard(EntityPlayer player) {

@@ -7,6 +7,7 @@ import com.nyonio.mekanism_advanced_configuration_card.network.PacketBagSlotClic
 import com.nyonio.mekanism_advanced_configuration_card.network.PacketBatchUpgrade;
 import com.nyonio.mekanism_advanced_configuration_card.network.PacketHandler;
 import com.nyonio.mekanism_advanced_configuration_card.network.PacketRemoveUpgradeModded;
+import com.nyonio.mekanism_advanced_configuration_card.network.PacketRequestBagSync;
 import mekanism.api.Coord4D;
 import mekanism.client.gui.GuiUpgradeManagement;
 import mekanism.common.base.IUpgradeTile;
@@ -185,6 +186,8 @@ public class GuiEventHandler {
         firstBagSlot = -1;
         firstBagFromBaubles = false;
         wasMouseDown = false;
+        
+        PacketHandler.getNetwork().sendToServer(new PacketRequestBagSync.RequestMessage());
         
         findFirstBag();
         findBags();
@@ -495,7 +498,7 @@ public class GuiEventHandler {
         if (!foundBags.isEmpty()) updateHandler();
     }
     
-    private static void scheduleRefresh() {
+    public static void scheduleRefresh() {
         refreshRemaining = REFRESH_DELAYS.length;
         refreshTime = System.currentTimeMillis() + REFRESH_DELAYS[0];
     }
