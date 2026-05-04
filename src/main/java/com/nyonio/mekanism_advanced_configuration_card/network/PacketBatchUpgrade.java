@@ -10,6 +10,7 @@ import mekanism.common.base.IUpgradeTile;
 import mekanism.common.tile.component.TileComponentUpgrade;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
@@ -43,6 +44,8 @@ public class PacketBatchUpgrade implements IMessageHandler<PacketBatchUpgrade.Ba
             } else if (message.action == ACTION_UNLOAD) {
                 doUnload(player, upgradeTile, bagRef.stack);
             }
+
+            syncBagToClient(player, bagRef);
 
             if (bagRef.isBaubles && BaublesCompat.isBaublesLoaded()) {
                 BaublesCompat.markSlotChanged(player, bagRef.slot);
@@ -182,6 +185,16 @@ public class PacketBatchUpgrade implements IMessageHandler<PacketBatchUpgrade.Ba
             }
         }
         return null;
+    }
+    
+    private void syncBagToClient(EntityPlayer player, BagRef bagRef) {
+        if (bagRef == null || bagRef.stack == null) return;
+        if (!(player instanceof net.minecraft.entity.player.EntityPlayerMP)) return;
+        net.minecraft.entity.player.EntityPlayerMP mp = (net.minecraft.entity.player.EntityPlayerMP) player;
+        NBTTagCompound tag = bagRef.stack.getTagCompound();
+        if (tag == null) tag = new NBTTagCompound();
+        int source = bagRef.isBaubles ? PacketSyncBagContents.SOURCE_BAUBLES : PacketSyncBagContents.SOURCE_MAIN;
+        PacketHandler.getNetwork().sendTo(new PacketSyncBagContents.SyncBagMessage(source, bagRef.slot, tag), mp);
     }
 
     private static class BagRef {

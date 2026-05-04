@@ -14,6 +14,7 @@ public class PacketHandler {
         network.registerMessage(PacketRemoveUpgradeModded.class, PacketRemoveUpgradeModded.RemoveUpgradeModdedMessage.class, id++, Side.SERVER);
         network.registerMessage(PacketBagSlotClick.class, PacketBagSlotClick.BagSlotClickMessage.class, id++, Side.SERVER);
         network.registerMessage(PacketBatchUpgrade.class, PacketBatchUpgrade.BatchUpgradeMessage.class, id++, Side.SERVER);
+        network.registerMessage(PacketSyncBagContents.class, PacketSyncBagContents.SyncBagMessage.class, id++, Side.CLIENT);
     }
 
     public static SimpleNetworkWrapper getNetwork() {

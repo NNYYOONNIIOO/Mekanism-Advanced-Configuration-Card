@@ -135,7 +135,7 @@ public class BaublesCompat {
         }
         try {
             BaublesCompatDirect.markSlotChanged(player, slot);
-        } catch (Exception e) {
+        } catch (Throwable e) {
         }
     }
 }

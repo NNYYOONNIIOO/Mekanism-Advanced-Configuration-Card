@@ -17,6 +17,7 @@ import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.GuiScreenEvent;
@@ -178,6 +179,7 @@ public class GuiEventHandler {
     public static void onGuiInit(GuiScreenEvent.InitGuiEvent.Post event) {
         if (!(event.getGui() instanceof GuiUpgradeManagement)) return;
         
+        MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] GUI init - clearing state");
         foundBags.clear();
         currentHandler = null;
         firstBagSlot = -1;
@@ -197,6 +199,7 @@ public class GuiEventHandler {
             if (ItemCardSlotBag.isBag(stack)) {
                 firstBagSlot = i;
                 firstBagFromBaubles = false;
+                MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] Found first bag in main inventory slot {}", i);
                 return;
             }
         }
@@ -206,6 +209,7 @@ public class GuiEventHandler {
             if (baublesSlot >= 0) {
                 firstBagSlot = baublesSlot;
                 firstBagFromBaubles = true;
+                MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] Found first bag in baubles slot {}", baublesSlot);
             }
         }
     }
@@ -243,6 +247,7 @@ public class GuiEventHandler {
             } else {
                 refreshTime = System.currentTimeMillis() + REFRESH_DELAYS[Math.min(REFRESH_DELAYS.length - 1, REFRESH_DELAYS.length - refreshRemaining)];
             }
+            MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] Refresh triggered, remaining={}", refreshRemaining);
             updateHandler();
         }
         
@@ -394,23 +399,39 @@ public class GuiEventHandler {
     }
     
     private static void handleLeftClick(int clickedSlot) {
-        if (clickedSlot < 0 || currentHandler == null) return;
+        if (clickedSlot < 0 || currentHandler == null) {
+            MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] handleLeftClick: invalid slot={} or handler=null", clickedSlot);
+            return;
+        }
         
         ItemStack slotStack = currentHandler.getStackInSlot(clickedSlot);
         ItemStack heldStack = Minecraft.getMinecraft().player.inventory.getItemStack();
         
+        MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] handleLeftClick: slot={}, slotStack={} x{}, heldStack={} x{}", 
+            clickedSlot,
+            slotStack.isEmpty() ? "empty" : slotStack.getItem().getRegistryName(),
+            slotStack.isEmpty() ? 0 : slotStack.getCount(),
+            heldStack.isEmpty() ? "empty" : heldStack.getItem().getRegistryName(),
+            heldStack.isEmpty() ? 0 : heldStack.getCount());
+        
         if (!heldStack.isEmpty()) {
             if (ItemCardSlotBag.isSupportedBagItem(heldStack)) {
                 if (slotStack.isEmpty()) {
+                    MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] Sending ACTION_PUT (empty slot)");
                     PacketHandler.getNetwork().sendToServer(new PacketBagSlotClick.BagSlotClickMessage(clickedSlot, PacketBagSlotClick.ACTION_PUT, 0));
                 } else if (ItemStack.areItemsEqual(slotStack, heldStack) && ItemStack.areItemStackTagsEqual(slotStack, heldStack)) {
+                    MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] Sending ACTION_PUT (merge)");
                     PacketHandler.getNetwork().sendToServer(new PacketBagSlotClick.BagSlotClickMessage(clickedSlot, PacketBagSlotClick.ACTION_PUT, 0));
                 } else {
+                    MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] Sending ACTION_SWAP");
                     PacketHandler.getNetwork().sendToServer(new PacketBagSlotClick.BagSlotClickMessage(clickedSlot, PacketBagSlotClick.ACTION_SWAP, 0));
                 }
+            } else {
+                MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] Held item not supported for bag");
             }
         } else if (!slotStack.isEmpty()) {
             int maxTake = getUpgradeMaxCount(slotStack);
+            MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] Sending ACTION_TAKE with maxTake={}", maxTake);
             PacketHandler.getNetwork().sendToServer(new PacketBagSlotClick.BagSlotClickMessage(clickedSlot, PacketBagSlotClick.ACTION_TAKE, maxTake));
         }
         
@@ -427,12 +448,14 @@ public class GuiEventHandler {
             IUpgradeTile tile = (IUpgradeTile) tileEntityField.get(gui);
             if (tile != null) {
                 TileEntity te = (TileEntity) tile;
+                MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] handleBatchUpgrade: action={}", action == PacketBatchUpgrade.ACTION_UPGRADE ? "UPGRADE" : "UNLOAD");
                 PacketHandler.getNetwork().sendToServer(
                     new PacketBatchUpgrade.BatchUpgradeMessage(Coord4D.get(te), action)
                 );
                 scheduleRefresh();
             }
         } catch (Exception e) {
+            MekConfigCardUpgradesMod.LOGGER.error("[GuiEvent] handleBatchUpgrade error", e);
         }
     }
     
@@ -456,13 +479,17 @@ public class GuiEventHandler {
             ItemStack stack = player.inventory.mainInventory.get(i);
             if (ItemCardSlotBag.isBag(stack)) {
                 foundBags.add(stack);
+                MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] findBags: found bag in main inventory slot {}", i);
                 break;
             }
         }
         
         if (foundBags.isEmpty() && BaublesCompat.isBaublesLoaded()) {
             List<ItemStack> baublesBags = BaublesCompat.getBaublesBags(player);
-            if (!baublesBags.isEmpty()) foundBags.add(baublesBags.get(0));
+            if (!baublesBags.isEmpty()) {
+                foundBags.add(baublesBags.get(0));
+                MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] findBags: found bag in baubles");
+            }
         }
         
         if (!foundBags.isEmpty()) updateHandler();
@@ -478,16 +505,43 @@ public class GuiEventHandler {
         if (player == null) { currentHandler = null; return; }
         
         ItemStack bagStack = null;
+        String bagSource = "none";
         for (int i = 0; i < player.inventory.mainInventory.size(); i++) {
             ItemStack stack = player.inventory.mainInventory.get(i);
-            if (ItemCardSlotBag.isBag(stack)) { bagStack = stack; break; }
+            if (ItemCardSlotBag.isBag(stack)) { 
+                bagStack = stack; 
+                bagSource = "main:" + i;
+                break; 
+            }
         }
         
         if (bagStack == null && BaublesCompat.isBaublesLoaded()) {
             List<ItemStack> baublesBags = BaublesCompat.getBaublesBags(player);
-            if (!baublesBags.isEmpty()) bagStack = baublesBags.get(0);
+            if (!baublesBags.isEmpty()) {
+                bagStack = baublesBags.get(0);
+                bagSource = "baubles";
+            }
+        }
+        
+        if (bagStack != null) {
+            NBTTagCompound tag = bagStack.getTagCompound();
+            MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] updateHandler: bagSource={}, hasTag={}, tagSize={}", 
+                bagSource, 
+                tag != null,
+                tag != null ? tag.toString().length() : 0);
+        } else {
+            MekConfigCardUpgradesMod.LOGGER.warn("[GuiEvent] updateHandler: no bag found!");
         }
         
         currentHandler = bagStack != null ? ItemCardSlotBag.readHandler(bagStack) : null;
+        
+        if (currentHandler != null) {
+            int totalItems = 0;
+            for (int i = 0; i < currentHandler.getSlots(); i++) {
+                ItemStack s = currentHandler.getStackInSlot(i);
+                if (!s.isEmpty()) totalItems++;
+            }
+            MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] updateHandler: handler loaded with {} non-empty slots", totalItems);
+        }
     }
 }

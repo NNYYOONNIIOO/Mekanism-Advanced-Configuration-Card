@@ -12,7 +12,7 @@ apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 
-version = '1.0.3.1'
+version = '1.0.3.2'
 group = 'com.Nyonio.mekanism_advanced_configuration_card'
 archivesBaseName = 'mekanism_advanced_configuration_card-1.12.2'
 
@@ -73,16 +73,6 @@ jar {
         ])
     }
 }
-
-task copyToMods(type: Copy, dependsOn: jar) {
-    from jar.archivePath
-    def modsDir = file('D:/pcl2/.minecraft/versions/1.12.2-Forge_14.23.5.2864/mods')
-    if (modsDir.exists()) {
-        into modsDir
-    }
-}
-
-build.finalizedBy copyToMods 
 
 publishing {
     publications {
