@@ -12,7 +12,7 @@ apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 
-version = '1.0.3.2'
+version = '1.0.3.3'
 group = 'com.Nyonio.mekanism_advanced_configuration_card'
 archivesBaseName = 'mekanism_advanced_configuration_card-1.12.2'
 
