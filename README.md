@@ -1,7 +1,7 @@
 ---
 
 # 通用机械高级配置卡 / Mekanism Advanced Configuration Card
-
+[Mekanism Advanced Configuration Card](https://www.curseforge.com/minecraft/mc-mods/mekanism-advanced-configuration-card)
 [中文](#中文) | [English](#english)
 
 ---
