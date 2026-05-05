@@ -479,6 +479,23 @@ public final class ConfigCardUpgradeHelper {
             }
         }
         
+        boolean isUltimateTarget = targetTierOrdinal >= BaseTier.ULTIMATE.ordinal();
+        Item compositeTierInstaller = null;
+        int compositeCountInInventory = 0;
+        int compositeCountInBags = 0;
+        long compositeCountInNetwork = 0;
+        
+        if (isUltimateTarget && MoreMachineCompat.isMoreMachineLoaded()) {
+            compositeTierInstaller = MoreMachineCompat.getCompositeTierInstallerItem();
+            if (compositeTierInstaller != null) {
+                compositeCountInInventory = countInInventory(player.inventory, compositeTierInstaller);
+                compositeCountInBags = ItemCardSlotBag.countInBags(player.inventory, new ItemStack(compositeTierInstaller));
+                if (ae2Storage != null) {
+                    compositeCountInNetwork = AE2Compat.countItemInNetwork(ae2Storage, compositeTierInstaller, 0);
+                }
+            }
+        }
+        
         java.util.List<String> missingTiers = new java.util.ArrayList<>();
         int tempTierOrdinal = -1;
         while (tempTierOrdinal < targetTierOrdinal) {
@@ -502,8 +519,22 @@ public final class ConfigCardUpgradeHelper {
             tempTierOrdinal++;
         }
         
-        if (!missingTiers.isEmpty()) {
+        boolean canUseComposite = isUltimateTarget && (compositeCountInInventory + compositeCountInBags + compositeCountInNetwork) >= 1;
+        
+        if (!missingTiers.isEmpty() && !canUseComposite) {
             return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.missing_tier_installers") + ": " + String.join(", ", missingTiers);
+        }
+        
+        if (canUseComposite && !missingTiers.isEmpty()) {
+            if (compositeCountInInventory > 0) {
+                removeFromInventory(player.inventory, compositeTierInstaller, 1);
+            } else if (compositeCountInBags > 0) {
+                ItemCardSlotBag.consumeFromBags(player.inventory, new ItemStack(compositeTierInstaller), 1);
+            } else if (ae2Storage != null && ae2Source != null) {
+                AE2Compat.extractItemFromNetwork(ae2Storage, compositeTierInstaller, 0, 1, ae2Source);
+            }
+            player.inventoryContainer.detectAndSendChanges();
+            return null;
         }
         
         tempTierOrdinal = -1;
@@ -615,6 +646,23 @@ public final class ConfigCardUpgradeHelper {
             }
         }
         
+        boolean isUltimateTarget = targetTierOrdinal >= BaseTier.ULTIMATE.ordinal();
+        Item compositeTierInstaller = null;
+        int compositeCountInInventory = 0;
+        int compositeCountInBags = 0;
+        long compositeCountInNetwork = 0;
+        
+        if (isUltimateTarget && MoreMachineCompat.isMoreMachineLoaded()) {
+            compositeTierInstaller = MoreMachineCompat.getCompositeTierInstallerItem();
+            if (compositeTierInstaller != null) {
+                compositeCountInInventory = countInInventory(player.inventory, compositeTierInstaller);
+                compositeCountInBags = ItemCardSlotBag.countInBags(player.inventory, new ItemStack(compositeTierInstaller));
+                if (ae2Storage != null) {
+                    compositeCountInNetwork = AE2Compat.countItemInNetwork(ae2Storage, compositeTierInstaller, 0);
+                }
+            }
+        }
+        
         java.util.List<String> missingTiers = new java.util.ArrayList<>();
         int tempTierOrdinal = currentTierOrdinal;
         while (tempTierOrdinal < targetTierOrdinal) {
@@ -637,8 +685,23 @@ public final class ConfigCardUpgradeHelper {
             }
             tempTierOrdinal++;
         }
-        if (!missingTiers.isEmpty()) {
+        
+        boolean canUseComposite = isUltimateTarget && (compositeCountInInventory + compositeCountInBags + compositeCountInNetwork) >= 1;
+        
+        if (!missingTiers.isEmpty() && !canUseComposite) {
             return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.missing_tier_installers") + ": " + String.join(", ", missingTiers);
+        }
+        
+        if (canUseComposite && !missingTiers.isEmpty()) {
+            if (compositeCountInInventory > 0) {
+                removeFromInventory(player.inventory, compositeTierInstaller, 1);
+            } else if (compositeCountInBags > 0) {
+                ItemCardSlotBag.consumeFromBags(player.inventory, new ItemStack(compositeTierInstaller), 1);
+            } else if (ae2Storage != null && ae2Source != null) {
+                AE2Compat.extractItemFromNetwork(ae2Storage, compositeTierInstaller, 0, 1, ae2Source);
+            }
+            player.inventoryContainer.detectAndSendChanges();
+            return null;
         }
         
         tempTierOrdinal = currentTierOrdinal;

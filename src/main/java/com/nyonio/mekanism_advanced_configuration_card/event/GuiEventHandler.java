@@ -2,10 +2,11 @@ package com.nyonio.mekanism_advanced_configuration_card.event;
 
 import com.nyonio.mekanism_advanced_configuration_card.MekConfigCardUpgradesMod;
 import com.nyonio.mekanism_advanced_configuration_card.compat.BaublesCompat;
+import com.nyonio.mekanism_advanced_configuration_card.compat.InfiniteUpgradeCardCompat;
 import com.nyonio.mekanism_advanced_configuration_card.item.ItemCardSlotBag;
-import com.nyonio.mekanism_advanced_configuration_card.network.PacketBagSlotClick;
 import com.nyonio.mekanism_advanced_configuration_card.network.PacketBatchUpgrade;
 import com.nyonio.mekanism_advanced_configuration_card.network.PacketHandler;
+import com.nyonio.mekanism_advanced_configuration_card.network.PacketInstallUpgradeFromBag;
 import com.nyonio.mekanism_advanced_configuration_card.network.PacketRemoveUpgradeModded;
 import com.nyonio.mekanism_advanced_configuration_card.network.PacketRequestBagSync;
 import mekanism.api.Coord4D;
@@ -17,6 +18,7 @@ import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
@@ -70,6 +72,7 @@ public class GuiEventHandler {
     private static final int[] REFRESH_DELAYS = {50, 200, 500};
     
     private static boolean wasMouseDown = false;
+    private static boolean wasRightMouseDown = false;
     private static int hoveredButton = -1;
     
     private static Field selectedTypeField;
@@ -126,6 +129,8 @@ public class GuiEventHandler {
         if (foundBags.isEmpty()) return;
         
         boolean isNowDown = Mouse.isButtonDown(0);
+        boolean isNowRightDown = Mouse.isButtonDown(1);
+        
         if (!wasMouseDown && isNowDown) {
             int mouseX = Mouse.getX() * mc.currentScreen.width / mc.displayWidth;
             int mouseY = mc.currentScreen.height - Mouse.getY() * mc.currentScreen.height / mc.displayHeight - 1;
@@ -153,27 +158,59 @@ public class GuiEventHandler {
             } else if (relX >= unloadBtnX && relX < unloadBtnX + BUTTON_SIZE && relY >= BUTTON_Y && relY < BUTTON_Y + BUTTON_SIZE) {
                 handleBatchUpgrade(PacketBatchUpgrade.ACTION_UNLOAD);
             } else if (relX >= 0 && relX < PANEL_WIDTH && relY >= 0 && relY < PANEL_HEIGHT) {
-                int clickedSlot = -1;
-                for (int row = 0; row < SLOTS_PER_COLUMN; row++) {
-                    for (int col = 0; col < SLOTS_PER_ROW; col++) {
-                        int slotIndex = col * SLOTS_PER_COLUMN + row;
-                        if (slotIndex >= ItemCardSlotBag.BAG_SIZE) continue;
-                        
-                        int slotX = SLOT_OFFSET_X + col * SLOT_SIZE;
-                        int slotY = SLOT_OFFSET_Y + row * SLOT_SIZE;
-                        
-                        if (relX >= slotX && relX < slotX + SLOT_SIZE && relY >= slotY && relY < slotY + SLOT_SIZE) {
-                            clickedSlot = slotIndex;
-                            break;
-                        }
-                    }
-                    if (clickedSlot >= 0) break;
+                int clickedSlot = getSlotAtPosition(relX, relY);
+                if (clickedSlot >= 0) {
+                    handleLeftClick(clickedSlot);
                 }
-                
-                handleLeftClick(clickedSlot);
             }
         }
+        
+        if (!wasRightMouseDown && isNowRightDown) {
+            int mouseX = Mouse.getX() * mc.currentScreen.width / mc.displayWidth;
+            int mouseY = mc.currentScreen.height - Mouse.getY() * mc.currentScreen.height / mc.displayHeight - 1;
+            
+            int guiXSize = 190;
+            try {
+                Field xSizeField = GuiScreen.class.getDeclaredField("xSize");
+                xSizeField.setAccessible(true);
+                guiXSize = xSizeField.getInt(mc.currentScreen);
+            } catch (Exception e) {}
+            
+            int guiLeft = (mc.currentScreen.width - guiXSize) / 2;
+            int guiTop = (mc.currentScreen.height - 166) / 2;
+            int panelX = guiLeft + guiXSize + 4;
+            int panelY = guiTop - (PANEL_HEIGHT - 166) / 2 - 2;
+            
+            int relX = mouseX - panelX;
+            int relY = mouseY - panelY;
+            
+            if (relX >= 0 && relX < PANEL_WIDTH && relY >= 0 && relY < PANEL_HEIGHT) {
+                int clickedSlot = getSlotAtPosition(relX, relY);
+                if (clickedSlot >= 0) {
+                    handleRightClick(clickedSlot);
+                }
+            }
+        }
+        
         wasMouseDown = isNowDown;
+        wasRightMouseDown = isNowRightDown;
+    }
+    
+    private static int getSlotAtPosition(int relX, int relY) {
+        for (int row = 0; row < SLOTS_PER_COLUMN; row++) {
+            for (int col = 0; col < SLOTS_PER_ROW; col++) {
+                int slotIndex = col * SLOTS_PER_COLUMN + row;
+                if (slotIndex >= ItemCardSlotBag.BAG_SIZE) continue;
+                
+                int slotX = SLOT_OFFSET_X + col * SLOT_SIZE;
+                int slotY = SLOT_OFFSET_Y + row * SLOT_SIZE;
+                
+                if (relX >= slotX && relX < slotX + SLOT_SIZE && relY >= slotY && relY < slotY + SLOT_SIZE) {
+                    return slotIndex;
+                }
+            }
+        }
+        return -1;
     }
     
     @SubscribeEvent
@@ -186,6 +223,7 @@ public class GuiEventHandler {
         firstBagSlot = -1;
         firstBagFromBaubles = false;
         wasMouseDown = false;
+        wasRightMouseDown = false;
         
         PacketHandler.getNetwork().sendToServer(new PacketRequestBagSync.RequestMessage());
         
@@ -402,43 +440,44 @@ public class GuiEventHandler {
     }
     
     private static void handleLeftClick(int clickedSlot) {
-        if (clickedSlot < 0 || currentHandler == null) {
-            MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] handleLeftClick: invalid slot={} or handler=null", clickedSlot);
-            return;
-        }
+        handleInstallUpgrade(clickedSlot, PacketInstallUpgradeFromBag.MODE_MAX);
+    }
+    
+    private static void handleRightClick(int clickedSlot) {
+        handleInstallUpgrade(clickedSlot, PacketInstallUpgradeFromBag.MODE_SINGLE);
+    }
+    
+    private static void handleInstallUpgrade(int clickedSlot, int mode) {
+        if (clickedSlot < 0 || currentHandler == null) return;
         
         ItemStack slotStack = currentHandler.getStackInSlot(clickedSlot);
-        ItemStack heldStack = Minecraft.getMinecraft().player.inventory.getItemStack();
+        if (slotStack.isEmpty()) return;
         
-        MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] handleLeftClick: slot={}, slotStack={} x{}, heldStack={} x{}", 
-            clickedSlot,
-            slotStack.isEmpty() ? "empty" : slotStack.getItem().getRegistryName(),
-            slotStack.isEmpty() ? 0 : slotStack.getCount(),
-            heldStack.isEmpty() ? "empty" : heldStack.getItem().getRegistryName(),
-            heldStack.isEmpty() ? 0 : heldStack.getCount());
+        Item item = slotStack.getItem();
+        boolean isInfinite = InfiniteUpgradeCardCompat.isInfiniteUpgradeCardLoaded() && 
+            item == InfiniteUpgradeCardCompat.getInfiniteUpgradeItem();
+        boolean isSuperInfinite = InfiniteUpgradeCardCompat.isInfiniteUpgradeCardLoaded() && 
+            item == InfiniteUpgradeCardCompat.getSuperInfiniteUpgradeItem();
+        boolean isUpgradeItem = item instanceof mekanism.common.base.IUpgradeItem;
         
-        if (!heldStack.isEmpty()) {
-            if (ItemCardSlotBag.isSupportedBagItem(heldStack)) {
-                if (slotStack.isEmpty()) {
-                    MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] Sending ACTION_PUT (empty slot)");
-                    PacketHandler.getNetwork().sendToServer(new PacketBagSlotClick.BagSlotClickMessage(clickedSlot, PacketBagSlotClick.ACTION_PUT, 0));
-                } else if (ItemStack.areItemsEqual(slotStack, heldStack) && ItemStack.areItemStackTagsEqual(slotStack, heldStack)) {
-                    MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] Sending ACTION_PUT (merge)");
-                    PacketHandler.getNetwork().sendToServer(new PacketBagSlotClick.BagSlotClickMessage(clickedSlot, PacketBagSlotClick.ACTION_PUT, 0));
-                } else {
-                    MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] Sending ACTION_SWAP");
-                    PacketHandler.getNetwork().sendToServer(new PacketBagSlotClick.BagSlotClickMessage(clickedSlot, PacketBagSlotClick.ACTION_SWAP, 0));
-                }
-            } else {
-                MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] Held item not supported for bag");
+        if (!isInfinite && !isSuperInfinite && !isUpgradeItem) return;
+        
+        Minecraft mc = Minecraft.getMinecraft();
+        if (!(mc.currentScreen instanceof GuiUpgradeManagement)) return;
+        
+        GuiUpgradeManagement gui = (GuiUpgradeManagement) mc.currentScreen;
+        
+        try {
+            IUpgradeTile tile = (IUpgradeTile) tileEntityField.get(gui);
+            if (tile != null) {
+                TileEntity te = (TileEntity) tile;
+                PacketHandler.getNetwork().sendToServer(
+                    new PacketInstallUpgradeFromBag.InstallMessage(Coord4D.get(te), clickedSlot, mode)
+                );
+                scheduleRefresh();
             }
-        } else if (!slotStack.isEmpty()) {
-            int maxTake = getUpgradeMaxCount(slotStack);
-            MekConfigCardUpgradesMod.LOGGER.info("[GuiEvent] Sending ACTION_TAKE with maxTake={}", maxTake);
-            PacketHandler.getNetwork().sendToServer(new PacketBagSlotClick.BagSlotClickMessage(clickedSlot, PacketBagSlotClick.ACTION_TAKE, maxTake));
+        } catch (Exception e) {
         }
-        
-        scheduleRefresh();
     }
     
     private static void handleBatchUpgrade(int action) {
@@ -460,17 +499,6 @@ public class GuiEventHandler {
         } catch (Exception e) {
             MekConfigCardUpgradesMod.LOGGER.error("[GuiEvent] handleBatchUpgrade error", e);
         }
-    }
-    
-    private static int getUpgradeMaxCount(ItemStack stack) {
-        if (stack.isEmpty()) return 0;
-        try {
-            if (stack.getItem() instanceof mekanism.common.base.IUpgradeItem) {
-                mekanism.common.Upgrade upgrade = ((mekanism.common.base.IUpgradeItem) stack.getItem()).getUpgradeType(stack);
-                if (upgrade != null) return upgrade.getMaxInstalled();
-            }
-        } catch (Exception e) {}
-        return 1;
     }
     
     private static void findBags() {
