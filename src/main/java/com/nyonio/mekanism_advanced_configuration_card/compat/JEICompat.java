@@ -1,6 +1,7 @@
 package com.nyonio.mekanism_advanced_configuration_card.compat;
 
 import com.nyonio.mekanism_advanced_configuration_card.MekConfigCardUpgradesMod;
+import com.nyonio.mekanism_advanced_configuration_card.event.GuiEventHandler;
 import com.nyonio.mekanism_advanced_configuration_card.item.ItemCardSlotBag;
 import mekanism.client.gui.GuiUpgradeManagement;
 import mezz.jei.api.IJeiRuntime;
@@ -15,7 +16,6 @@ import net.minecraft.item.ItemStack;
 import javax.annotation.Nullable;
 import java.awt.Rectangle;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @JEIPlugin
@@ -58,15 +58,8 @@ public class JEICompat implements IModPlugin {
             
             if (!hasBag) return null;
             
-            int guiLeft = guiContainer.getGuiLeft();
-            int guiTop = guiContainer.getGuiTop();
-            int guiXSize = guiContainer.getXSize();
-            
-            int panelX = guiLeft + guiXSize + 4;
-            int panelY = guiTop - (185 - 166) / 2 - 2;
-            
             List<Rectangle> areas = new ArrayList<>();
-            areas.add(new Rectangle(panelX, panelY, 72, 185));
+            areas.add(GuiEventHandler.getPanelArea(guiContainer.getGuiLeft(), guiContainer.getGuiTop(), GuiEventHandler.getGuiXSize(guiContainer), GuiEventHandler.getGuiYSize(guiContainer)));
             return areas;
         }
     }

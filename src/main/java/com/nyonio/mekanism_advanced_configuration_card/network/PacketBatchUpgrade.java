@@ -17,10 +17,14 @@ import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import net.minecraftforge.items.ItemStackHandler;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class PacketBatchUpgrade implements IMessageHandler<PacketBatchUpgrade.BatchUpgradeMessage, IMessage> {
 
     public static final int ACTION_UPGRADE = 0;
     public static final int ACTION_UNLOAD = 1;
+    private static final int MAX_BAUBLES_SLOTS = 64;
 
     @Override
     public IMessage onMessage(BatchUpgradeMessage message, MessageContext context) {
@@ -36,19 +40,22 @@ public class PacketBatchUpgrade implements IMessageHandler<PacketBatchUpgrade.Ba
             IUpgradeTile upgradeTile = (IUpgradeTile) tileEntity;
             if (!upgradeTile.supportsUpgrades()) return;
 
-            BagRef bagRef = findBagRef(player);
-            if (bagRef == null || bagRef.stack == null) return;
+            List<BagRef> bagRefs = findBagRefs(player);
+            List<BagRef> modifiedBags = new ArrayList<>();
 
             if (message.action == ACTION_UPGRADE) {
-                doUpgrade(player, upgradeTile, bagRef.stack);
+                doUpgrade(player, upgradeTile, bagRefs, modifiedBags);
             } else if (message.action == ACTION_UNLOAD) {
-                doUnload(player, upgradeTile, bagRef.stack);
+                doUnload(player, upgradeTile, bagRefs, modifiedBags);
+            } else {
+                return;
             }
 
-            syncBagToClient(player, bagRef);
-
-            if (bagRef.isBaubles && BaublesCompat.isBaublesLoaded()) {
-                BaublesCompat.markSlotChanged(player, bagRef.slot);
+            for (BagRef bagRef : modifiedBags) {
+                syncBagToClient(player, bagRef);
+                if (bagRef.isBaubles && BaublesCompat.isBaublesLoaded()) {
+                    BaublesCompat.markSlotChanged(player, bagRef.slot);
+                }
             }
             player.inventoryContainer.detectAndSendChanges();
         });
@@ -56,10 +63,8 @@ public class PacketBatchUpgrade implements IMessageHandler<PacketBatchUpgrade.Ba
         return null;
     }
 
-    private void doUpgrade(EntityPlayer player, IUpgradeTile upgradeTile, ItemStack bagStack) {
+    private void doUpgrade(EntityPlayer player, IUpgradeTile upgradeTile, List<BagRef> bagRefs, List<BagRef> modifiedBags) {
         TileComponentUpgrade component = upgradeTile.getComponent();
-        ItemStackHandler handler = ItemCardSlotBag.readHandler(bagStack);
-        boolean changed = false;
         boolean hasSuperInfinite = InfiniteUpgradeCardCompat.hasSuperInfiniteUpgrade(player);
         boolean hasInfinite = InfiniteUpgradeCardCompat.hasInfiniteUpgrade(player);
 
@@ -73,57 +78,45 @@ public class PacketBatchUpgrade implements IMessageHandler<PacketBatchUpgrade.Ba
 
             if (player.isCreative() || hasSuperInfinite) {
                 component.addUpgrades(upgrade, needed);
-                changed = true;
                 continue;
             }
 
             if (hasInfinite && (upgrade == Upgrade.SPEED || upgrade == Upgrade.ENERGY)) {
                 component.addUpgrades(upgrade, needed);
-                changed = true;
                 continue;
             }
 
             ItemStack upgradeStack = upgrade.getStack();
-            int available = countInHandler(handler, upgradeStack);
-            if (available <= 0) continue;
-
-            int toInstall = Math.min(needed, available);
-            consumeFromHandler(handler, upgradeStack, toInstall);
-            component.addUpgrades(upgrade, toInstall);
-            changed = true;
-        }
-
-        if (changed) {
-            ItemCardSlotBag.writeHandler(bagStack, handler);
+            int consumed = consumeUpgradeFromBags(bagRefs, modifiedBags, upgradeStack, needed);
+            if (consumed > 0) {
+                component.addUpgrades(upgrade, consumed);
+            }
         }
     }
 
-    private void doUnload(EntityPlayer player, IUpgradeTile upgradeTile, ItemStack bagStack) {
+    private void doUnload(EntityPlayer player, IUpgradeTile upgradeTile, List<BagRef> bagRefs, List<BagRef> modifiedBags) {
         TileComponentUpgrade component = upgradeTile.getComponent();
-        ItemStackHandler handler = ItemCardSlotBag.readHandler(bagStack);
-        boolean changed = false;
 
         for (Upgrade upgrade : Upgrade.values()) {
             int current = component.getUpgrades(upgrade);
             if (current <= 0) continue;
 
             ItemStack upgradeStack = upgrade.getStack();
-            int remaining = current;
+            int remaining = insertUpgradeToBags(bagRefs, modifiedBags, upgradeStack, current);
 
-            for (int slot = 0; slot < handler.getSlots() && remaining > 0; slot++) {
+            if (remaining > 0) {
                 ItemStack toInsert = ItemCardSlotBag.copyStackWithSize(upgradeStack, remaining);
-                ItemStack result = handler.insertItem(slot, toInsert, false);
-                if (result.isEmpty()) {
+                if (player.inventory.addItemStackToInventory(toInsert)) {
                     remaining = 0;
                 } else {
-                    remaining = result.getCount();
+                    remaining = toInsert.getCount();
                 }
             }
 
             if (remaining > 0) {
-                ItemStack toInsert = ItemCardSlotBag.copyStackWithSize(upgradeStack, remaining);
-                int notInserted = player.inventory.addItemStackToInventory(toInsert) ? 0 : toInsert.getCount();
-                remaining = notInserted;
+                ItemStack dropStack = ItemCardSlotBag.copyStackWithSize(upgradeStack, remaining);
+                player.dropItem(dropStack, false);
+                remaining = 0;
             }
 
             if (remaining < current) {
@@ -131,18 +124,7 @@ public class PacketBatchUpgrade implements IMessageHandler<PacketBatchUpgrade.Ba
                 for (int i = 0; i < removed; i++) {
                     component.removeUpgrade(upgrade, false);
                 }
-                changed = true;
-
-                if (remaining > 0) {
-                    ItemStack dropStack = upgrade.getStack().copy();
-                    dropStack.setCount(remaining);
-                    player.dropItem(dropStack, false);
-                }
             }
-        }
-
-        if (changed) {
-            ItemCardSlotBag.writeHandler(bagStack, handler);
         }
     }
 
@@ -157,38 +139,107 @@ public class PacketBatchUpgrade implements IMessageHandler<PacketBatchUpgrade.Ba
         return total;
     }
 
-    private void consumeFromHandler(ItemStackHandler handler, ItemStack stack, int amount) {
+    private int consumeUpgradeFromBags(List<BagRef> bagRefs, List<BagRef> modifiedBags, ItemStack stack, int amount) {
+        int remaining = amount;
+        for (BagRef bagRef : bagRefs) {
+            if (remaining <= 0) break;
+            ItemStackHandler handler = ItemCardSlotBag.readHandler(bagRef.stack);
+            int consumed = consumeFromHandler(handler, stack, remaining);
+            if (consumed > 0) {
+                remaining -= consumed;
+                ItemCardSlotBag.writeHandler(bagRef.stack, handler);
+                addModifiedBag(modifiedBags, bagRef);
+            }
+        }
+        return amount - remaining;
+    }
+
+    private int consumeFromHandler(ItemStackHandler handler, ItemStack stack, int amount) {
+        int consumed = 0;
         int remaining = amount;
         for (int i = 0; i < handler.getSlots() && remaining > 0; i++) {
             ItemStack inSlot = handler.getStackInSlot(i);
             if (!inSlot.isEmpty() && inSlot.isItemEqual(stack) && ItemStack.areItemStackTagsEqual(inSlot, stack)) {
                 int toShrink = Math.min(inSlot.getCount(), remaining);
-                inSlot.shrink(toShrink);
-                remaining -= toShrink;
-                if (inSlot.isEmpty()) {
-                    handler.setStackInSlot(i, ItemStack.EMPTY);
+                ItemStack extracted = handler.extractItem(i, toShrink, false);
+                if (!extracted.isEmpty()) {
+                    int extractedCount = extracted.getCount();
+                    consumed += extractedCount;
+                    remaining -= extractedCount;
                 }
             }
         }
+        return consumed;
     }
 
-    private BagRef findBagRef(EntityPlayer player) {
-        for (int i = 0; i < player.inventory.mainInventory.size(); i++) {
-            ItemStack stack = player.inventory.mainInventory.get(i);
-            if (ItemCardSlotBag.isBag(stack)) return new BagRef(stack, i, false);
-        }
-        if (BaublesCompat.isBaublesLoaded()) {
-            int slot = BaublesCompat.findFirstBagSlot(player);
-            if (slot >= 0) {
-                ItemStack stack = BaublesCompat.getStackInSlot(player, slot);
-                if (!stack.isEmpty()) return new BagRef(stack, slot, true);
+    private int insertUpgradeToBags(List<BagRef> bagRefs, List<BagRef> modifiedBags, ItemStack stack, int amount) {
+        int remaining = amount;
+        for (BagRef bagRef : bagRefs) {
+            if (remaining <= 0) break;
+            ItemStackHandler handler = ItemCardSlotBag.readHandler(bagRef.stack);
+            int before = remaining;
+            remaining = insertToHandler(handler, stack, remaining);
+            if (remaining < before) {
+                ItemCardSlotBag.writeHandler(bagRef.stack, handler);
+                addModifiedBag(modifiedBags, bagRef);
             }
         }
-        return null;
+        return remaining;
+    }
+
+    private int insertToHandler(ItemStackHandler handler, ItemStack stack, int amount) {
+        int remaining = amount;
+        for (int slot = 0; slot < handler.getSlots() && remaining > 0; slot++) {
+            ItemStack toInsert = ItemCardSlotBag.copyStackWithSize(stack, remaining);
+            ItemStack result = handler.insertItem(slot, toInsert, false);
+            if (result.isEmpty()) {
+                remaining = 0;
+            } else {
+                remaining = result.getCount();
+            }
+        }
+        return remaining;
+    }
+
+    private List<BagRef> findBagRefs(EntityPlayer player) {
+        List<BagRef> bagRefs = new ArrayList<>();
+        for (int i = 0; i < player.inventory.mainInventory.size(); i++) {
+            ItemStack stack = player.inventory.mainInventory.get(i);
+            if (ItemCardSlotBag.isBag(stack)) {
+                bagRefs.add(new BagRef(stack, i, false, true));
+            }
+        }
+        for (int i = 0; i < player.inventory.offHandInventory.size(); i++) {
+            ItemStack stack = player.inventory.offHandInventory.get(i);
+            if (ItemCardSlotBag.isBag(stack)) {
+                bagRefs.add(new BagRef(stack, i, false, false));
+            }
+        }
+        if (BaublesCompat.isBaublesLoaded()) {
+            for (int slot = 0; slot < MAX_BAUBLES_SLOTS; slot++) {
+                if (BaublesCompat.hasBagAtSlot(player, slot)) {
+                    ItemStack stack = BaublesCompat.getStackInSlot(player, slot);
+                    if (ItemCardSlotBag.isBag(stack)) {
+                        bagRefs.add(new BagRef(stack, slot, true, true));
+                    }
+                }
+            }
+        }
+        return bagRefs;
+    }
+
+    private void addModifiedBag(List<BagRef> modifiedBags, BagRef bagRef) {
+        if (bagRef == null || !bagRef.syncPacket) return;
+        for (BagRef modifiedBag : modifiedBags) {
+            if (modifiedBag.stack == bagRef.stack && modifiedBag.slot == bagRef.slot && modifiedBag.isBaubles == bagRef.isBaubles) {
+                return;
+            }
+        }
+        modifiedBags.add(bagRef);
     }
     
     private void syncBagToClient(EntityPlayer player, BagRef bagRef) {
-        if (bagRef == null || bagRef.stack == null) return;
+        if (bagRef == null || bagRef.stack == null || !bagRef.syncPacket) return;
         if (!(player instanceof net.minecraft.entity.player.EntityPlayerMP)) return;
         net.minecraft.entity.player.EntityPlayerMP mp = (net.minecraft.entity.player.EntityPlayerMP) player;
         NBTTagCompound tag = bagRef.stack.getTagCompound();
@@ -201,10 +252,12 @@ public class PacketBatchUpgrade implements IMessageHandler<PacketBatchUpgrade.Ba
         final ItemStack stack;
         final int slot;
         final boolean isBaubles;
-        BagRef(ItemStack stack, int slot, boolean isBaubles) {
+        final boolean syncPacket;
+        BagRef(ItemStack stack, int slot, boolean isBaubles, boolean syncPacket) {
             this.stack = stack;
             this.slot = slot;
             this.isBaubles = isBaubles;
+            this.syncPacket = syncPacket;
         }
     }
 

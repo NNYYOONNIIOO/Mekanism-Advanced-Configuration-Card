@@ -145,6 +145,22 @@ public class PacketRemoveUpgradeModded implements IMessageHandler<PacketRemoveUp
                 modifiedBags.add(new BagRef(bagStack, i, false));
             }
         }
+        for (int i = 0; i < player.inventory.offHandInventory.size() && remaining > 0; i++) {
+            ItemStack bagStack = player.inventory.offHandInventory.get(i);
+            if (ItemCardSlotBag.isBag(bagStack)) {
+                ItemStackHandler handler = ItemCardSlotBag.readHandler(bagStack);
+                for (int slot = 0; slot < handler.getSlots() && remaining > 0; slot++) {
+                    ItemStack toInsert = ItemCardSlotBag.copyStackWithSize(upgradeStack, remaining);
+                    ItemStack result = handler.insertItem(slot, toInsert, false);
+                    if (result.isEmpty()) {
+                        remaining = 0;
+                    } else {
+                        remaining = result.getCount();
+                    }
+                }
+                ItemCardSlotBag.writeHandler(bagStack, handler);
+            }
+        }
         if (remaining > 0 && BaublesCompat.isBaublesLoaded()) {
             int slot = BaublesCompat.findFirstBagSlot(player);
             if (slot >= 0) {

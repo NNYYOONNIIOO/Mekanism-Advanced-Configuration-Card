@@ -15,6 +15,7 @@ import mekanism.common.base.IUpgradeTile;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.entity.player.EntityPlayer;
@@ -32,6 +33,7 @@ import net.minecraftforge.items.ItemStackHandler;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
+import java.awt.Rectangle;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,12 +46,19 @@ public class GuiEventHandler {
     private static final ResourceLocation UPGRADE_BUTTON_TEXTURE = new ResourceLocation(
         MekConfigCardUpgradesMod.MOD_ID, "textures/gui/upgrade.png");
     
-    private static final int PANEL_WIDTH = 72;
-    private static final int PANEL_HEIGHT = 185;
+    public static final int PANEL_WIDTH = 72;
+    public static final int PANEL_HEIGHT = 185;
+    public static final int PANEL_OFFSET_X = 4;
+    private static final int PANEL_OFFSET_Y = -2;
+    private static final int FALLBACK_GUI_WIDTH = 190;
+    private static final int FALLBACK_GUI_HEIGHT = 166;
     private static final int SLOT_SIZE = 18;
     private static final int SLOTS_PER_ROW = 3;
     private static final int SLOTS_PER_COLUMN = 9;
     private static final int TITLE_HEIGHT = 12;
+    private static final int TITLE_X = 4;
+    private static final int TITLE_Y = 3;
+    private static final float TITLE_SCALE = 0.75F;
     private static final int SLOT_OFFSET_X = 7;
     private static final int SLOT_OFFSET_Y = TITLE_HEIGHT + 5;
     private static final int ICON_OFFSET_X = 1;
@@ -87,7 +96,34 @@ public class GuiEventHandler {
         } catch (Exception e) {
         }
     }
-    
+
+    public static Rectangle getPanelArea(int guiLeft, int guiTop, int guiXSize, int guiYSize) {
+        int panelX = guiLeft + guiXSize + PANEL_OFFSET_X;
+        int panelY = guiTop - (PANEL_HEIGHT - guiYSize) / 2 + PANEL_OFFSET_Y;
+        return new Rectangle(panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT);
+    }
+
+    public static int getGuiXSize(GuiScreen gui) {
+        return getGuiSize(gui, "xSize", FALLBACK_GUI_WIDTH);
+    }
+
+    public static int getGuiYSize(GuiScreen gui) {
+        return getGuiSize(gui, "ySize", FALLBACK_GUI_HEIGHT);
+    }
+
+    private static int getGuiSize(GuiScreen gui, String fieldName, int fallback) {
+        if (!(gui instanceof GuiContainer)) {
+            return fallback;
+        }
+        try {
+            Field field = GuiContainer.class.getDeclaredField(fieldName);
+            field.setAccessible(true);
+            return field.getInt(gui);
+        } catch (Exception e) {
+            return fallback;
+        }
+    }
+
     @SubscribeEvent
     public static void onActionPerformed(GuiScreenEvent.ActionPerformedEvent.Pre event) {
         if (!(event.getGui() instanceof GuiUpgradeManagement)) return;
@@ -135,20 +171,14 @@ public class GuiEventHandler {
             int mouseX = Mouse.getX() * mc.currentScreen.width / mc.displayWidth;
             int mouseY = mc.currentScreen.height - Mouse.getY() * mc.currentScreen.height / mc.displayHeight - 1;
             
-            int guiXSize = 190;
-            try {
-                Field xSizeField = GuiScreen.class.getDeclaredField("xSize");
-                xSizeField.setAccessible(true);
-                guiXSize = xSizeField.getInt(mc.currentScreen);
-            } catch (Exception e) {}
-            
+            int guiXSize = getGuiXSize(mc.currentScreen);
+            int guiYSize = getGuiYSize(mc.currentScreen);
             int guiLeft = (mc.currentScreen.width - guiXSize) / 2;
-            int guiTop = (mc.currentScreen.height - 166) / 2;
-            int panelX = guiLeft + guiXSize + 4;
-            int panelY = guiTop - (PANEL_HEIGHT - 166) / 2 - 2;
+            int guiTop = (mc.currentScreen.height - guiYSize) / 2;
+            Rectangle panelArea = getPanelArea(guiLeft, guiTop, guiXSize, guiYSize);
             
-            int relX = mouseX - panelX;
-            int relY = mouseY - panelY;
+            int relX = mouseX - panelArea.x;
+            int relY = mouseY - panelArea.y;
             
             int unloadBtnX = PANEL_WIDTH - SLOT_OFFSET_X - BUTTON_SIZE;
             int upgradeBtnX = unloadBtnX - BUTTON_GAP - BUTTON_SIZE;
@@ -169,20 +199,14 @@ public class GuiEventHandler {
             int mouseX = Mouse.getX() * mc.currentScreen.width / mc.displayWidth;
             int mouseY = mc.currentScreen.height - Mouse.getY() * mc.currentScreen.height / mc.displayHeight - 1;
             
-            int guiXSize = 190;
-            try {
-                Field xSizeField = GuiScreen.class.getDeclaredField("xSize");
-                xSizeField.setAccessible(true);
-                guiXSize = xSizeField.getInt(mc.currentScreen);
-            } catch (Exception e) {}
-            
+            int guiXSize = getGuiXSize(mc.currentScreen);
+            int guiYSize = getGuiYSize(mc.currentScreen);
             int guiLeft = (mc.currentScreen.width - guiXSize) / 2;
-            int guiTop = (mc.currentScreen.height - 166) / 2;
-            int panelX = guiLeft + guiXSize + 4;
-            int panelY = guiTop - (PANEL_HEIGHT - 166) / 2 - 2;
+            int guiTop = (mc.currentScreen.height - guiYSize) / 2;
+            Rectangle panelArea = getPanelArea(guiLeft, guiTop, guiXSize, guiYSize);
             
-            int relX = mouseX - panelX;
-            int relY = mouseY - panelY;
+            int relX = mouseX - panelArea.x;
+            int relY = mouseY - panelArea.y;
             
             if (relX >= 0 && relX < PANEL_WIDTH && relY >= 0 && relY < PANEL_HEIGHT) {
                 int clickedSlot = getSlotAtPosition(relX, relY);
@@ -294,28 +318,33 @@ public class GuiEventHandler {
         
         GuiScreen gui = event.getGui();
         
-        int guiXSize = 190;
-        try {
-            Field xSizeField = GuiScreen.class.getDeclaredField("xSize");
-            xSizeField.setAccessible(true);
-            guiXSize = xSizeField.getInt(gui);
-        } catch (Exception e) {}
+        int guiXSize = getGuiXSize(gui);
+        int guiYSize = getGuiYSize(gui);
         
         cachedGuiLeft = (gui.width - guiXSize) / 2;
-        cachedGuiTop = (gui.height - 166) / 2;
+        cachedGuiTop = (gui.height - guiYSize) / 2;
         
-        int panelX = cachedGuiLeft + guiXSize + 4;
-        int panelY = cachedGuiTop - (PANEL_HEIGHT - 166) / 2 - 2;
+        Rectangle panelArea = getPanelArea(cachedGuiLeft, cachedGuiTop, guiXSize, guiYSize);
+        int panelX = panelArea.x;
+        int panelY = panelArea.y;
         
         Minecraft.getMinecraft().getTextureManager().bindTexture(CARD_SLOT_BAG_PANEL_TEXTURE);
         gui.drawTexturedModalRect(panelX, panelY, 0, 0, PANEL_WIDTH, PANEL_HEIGHT);
         
         String title = net.minecraft.util.text.translation.I18n.translateToLocal("mekanism_advanced_configuration_card.card_slot_bag.title");
-        Minecraft.getMinecraft().fontRenderer.drawString(title, panelX + SLOT_OFFSET_X, panelY + 5, 0x404040);
         
         int unloadBtnX = panelX + PANEL_WIDTH - SLOT_OFFSET_X - BUTTON_SIZE;
         int upgradeBtnX = unloadBtnX - BUTTON_GAP - BUTTON_SIZE;
         int btnY = panelY + BUTTON_Y;
+        int titleMaxWidth = (int)((upgradeBtnX - panelX - TITLE_X - 1) / TITLE_SCALE);
+        if (Minecraft.getMinecraft().fontRenderer.getStringWidth(title) > titleMaxWidth) {
+            title = Minecraft.getMinecraft().fontRenderer.trimStringToWidth(title, titleMaxWidth);
+        }
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(panelX + TITLE_X, panelY + TITLE_Y, 0);
+        GlStateManager.scale(TITLE_SCALE, TITLE_SCALE, TITLE_SCALE);
+        Minecraft.getMinecraft().fontRenderer.drawString(title, 0, 0, 0x404040);
+        GlStateManager.popMatrix();
         
         Minecraft.getMinecraft().getTextureManager().bindTexture(UPGRADE_BUTTON_TEXTURE);
         
@@ -359,7 +388,8 @@ public class GuiEventHandler {
                         int slotY = panelY + SLOT_OFFSET_Y + row * SLOT_SIZE + ICON_OFFSET_Y;
                         
                         Minecraft.getMinecraft().getRenderItem().renderItemAndEffectIntoGUI(stack, slotX, slotY);
-                        Minecraft.getMinecraft().getRenderItem().renderItemOverlayIntoGUI(Minecraft.getMinecraft().fontRenderer, stack, slotX, slotY, null);
+                        Minecraft.getMinecraft().getRenderItem().renderItemOverlayIntoGUI(Minecraft.getMinecraft().fontRenderer, stack, slotX, slotY, stack.getCount() > 1 ? "" : null);
+                        renderStackCount(stack, slotX, slotY);
                     }
                 }
             }
@@ -374,8 +404,8 @@ public class GuiEventHandler {
         int relMouseX = mouseX - cachedGuiLeft;
         int relMouseY = mouseY - cachedGuiTop;
         
-        int relPanelX = guiXSize + 4;
-        int relPanelYOffset = -(PANEL_HEIGHT - 166) / 2 - 2;
+        int relPanelX = guiXSize + PANEL_OFFSET_X;
+        int relPanelYOffset = -(PANEL_HEIGHT - guiYSize) / 2 + PANEL_OFFSET_Y;
         
         hoveredSlot = -1;
         hoveredButton = -1;
@@ -412,6 +442,42 @@ public class GuiEventHandler {
         }
     }
     
+    private static void renderStackCount(ItemStack stack, int x, int y) {
+        if (stack.isEmpty() || stack.getCount() <= 1) {
+            return;
+        }
+        Minecraft mc = Minecraft.getMinecraft();
+        String countText = getCountText(stack.getCount());
+        float scale = 0.8F;
+        int textWidth = mc.fontRenderer.getStringWidth(countText);
+        int textHeight = mc.fontRenderer.FONT_HEIGHT;
+        int scaledWidth = (int)(textWidth * scale);
+        int scaledHeight = (int)(textHeight * scale);
+        int textX = x + 16 - scaledWidth;
+        int textY = y + 16 - scaledHeight;
+
+        GlStateManager.disableLighting();
+        GlStateManager.disableDepth();
+        GuiScreen.drawRect(textX - 1, textY - 1, x + 16, y + 16, 0xAA000000);
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(textX, textY, 200);
+        GlStateManager.scale(scale, scale, scale);
+        mc.fontRenderer.drawStringWithShadow(countText, 0, 0, 0xFFFFFF);
+        GlStateManager.popMatrix();
+        GlStateManager.enableDepth();
+        GlStateManager.enableLighting();
+    }
+
+    private static String getCountText(int count) {
+        if (count >= 1000000) {
+            return count / 1000000 + "M";
+        }
+        if (count >= 1000) {
+            return count / 1000 + "K";
+        }
+        return String.valueOf(count);
+    }
+
     @SubscribeEvent
     public static void onDrawForeground(GuiScreenEvent.DrawScreenEvent.Post event) {
         if (!(event.getGui() instanceof GuiUpgradeManagement)) return;
