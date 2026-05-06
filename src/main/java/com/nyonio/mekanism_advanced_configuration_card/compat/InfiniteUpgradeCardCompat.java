@@ -14,6 +14,7 @@ public class InfiniteUpgradeCardCompat {
     private static Item infiniteUpgrade = null;
     private static Item superInfiniteUpgrade = null;
     private static Item infiniteFactoryInstaller = null;
+    private static final int MAX_BAUBLES_SLOTS = 64;
     
     public static void init() {
         loaded = Loader.isModLoaded("infinite_upgrade_card");
@@ -62,16 +63,7 @@ public class InfiniteUpgradeCardCompat {
         }
         
         if (infiniteUpgrade != null) {
-            for (int i = 0; i < player.inventory.getSizeInventory(); i++) {
-                ItemStack stack = player.inventory.getStackInSlot(i);
-                if (!stack.isEmpty() && stack.getItem() == infiniteUpgrade) {
-                    return true;
-                }
-            }
-            
-            ItemStack infiniteStack = new ItemStack(infiniteUpgrade);
-            int countInBags = ItemCardSlotBag.countInBags(player.inventory, infiniteStack);
-            if (countInBags > 0) {
+            if (hasItemInPlayerStorage(player, infiniteUpgrade)) {
                 return true;
             }
             
@@ -96,16 +88,7 @@ public class InfiniteUpgradeCardCompat {
         }
         
         if (superInfiniteUpgrade != null) {
-            for (int i = 0; i < player.inventory.getSizeInventory(); i++) {
-                ItemStack stack = player.inventory.getStackInSlot(i);
-                if (!stack.isEmpty() && stack.getItem() == superInfiniteUpgrade) {
-                    return true;
-                }
-            }
-            
-            ItemStack superInfiniteStack = new ItemStack(superInfiniteUpgrade);
-            int countInBags = ItemCardSlotBag.countInBags(player.inventory, superInfiniteStack);
-            if (countInBags > 0) {
+            if (hasItemInPlayerStorage(player, superInfiniteUpgrade)) {
                 return true;
             }
             
@@ -130,16 +113,7 @@ public class InfiniteUpgradeCardCompat {
         }
         
         if (infiniteFactoryInstaller != null) {
-            for (int i = 0; i < player.inventory.getSizeInventory(); i++) {
-                ItemStack stack = player.inventory.getStackInSlot(i);
-                if (!stack.isEmpty() && stack.getItem() == infiniteFactoryInstaller) {
-                    return true;
-                }
-            }
-            
-            ItemStack infiniteFactoryInstallerStack = new ItemStack(infiniteFactoryInstaller);
-            int countInBags = ItemCardSlotBag.countInBags(player.inventory, infiniteFactoryInstallerStack);
-            if (countInBags > 0) {
+            if (hasItemInPlayerStorage(player, infiniteFactoryInstaller)) {
                 return true;
             }
             
@@ -148,6 +122,31 @@ public class InfiniteUpgradeCardCompat {
             }
         }
         
+        return false;
+    }
+
+    private static boolean hasItemInPlayerStorage(EntityPlayer player, Item item) {
+        for (int i = 0; i < player.inventory.getSizeInventory(); i++) {
+            ItemStack stack = player.inventory.getStackInSlot(i);
+            if (!stack.isEmpty() && stack.getItem() == item) {
+                return true;
+            }
+        }
+
+        ItemStack target = new ItemStack(item);
+        if (ItemCardSlotBag.countInBags(player.inventory, target) > 0) {
+            return true;
+        }
+
+        if (BaublesCompat.isBaublesLoaded()) {
+            for (int slot = 0; slot < MAX_BAUBLES_SLOTS; slot++) {
+                ItemStack stack = BaublesCompat.getStackInSlot(player, slot);
+                if (!stack.isEmpty() && stack.getItem() == item) {
+                    return true;
+                }
+            }
+        }
+
         return false;
     }
     
@@ -160,7 +159,7 @@ public class InfiniteUpgradeCardCompat {
             return false;
         }
         String key = AE2Compat.getNetworkKey(tag);
-        appeng.api.networking.storage.IStorageGrid storage = AE2Compat.getStorageGridFromKey(key);
+        Object storage = AE2Compat.getStorageGridFromKey(key);
         if (storage == null) {
             return false;
         }
@@ -176,7 +175,7 @@ public class InfiniteUpgradeCardCompat {
             return false;
         }
         String key = AE2Compat.getNetworkKey(tag);
-        appeng.api.networking.storage.IStorageGrid storage = AE2Compat.getStorageGridFromKey(key);
+        Object storage = AE2Compat.getStorageGridFromKey(key);
         if (storage == null) {
             return false;
         }
@@ -192,7 +191,7 @@ public class InfiniteUpgradeCardCompat {
             return false;
         }
         String key = AE2Compat.getNetworkKey(tag);
-        appeng.api.networking.storage.IStorageGrid storage = AE2Compat.getStorageGridFromKey(key);
+        Object storage = AE2Compat.getStorageGridFromKey(key);
         if (storage == null) {
             return false;
         }

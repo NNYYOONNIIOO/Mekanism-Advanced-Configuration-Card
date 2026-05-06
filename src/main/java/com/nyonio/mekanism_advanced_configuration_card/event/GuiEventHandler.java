@@ -66,6 +66,9 @@ public class GuiEventHandler {
     private static final int BUTTON_SIZE = 12;
     private static final int BUTTON_Y = 4;
     private static final int BUTTON_GAP = 2;
+    private static final Field XSIZE_FIELD;
+    private static final Field YSIZE_FIELD;
+    private static final boolean REFLECT_OK;
     
     private static List<ItemStack> foundBags = new ArrayList<>();
     private static int hoveredSlot = -1;
@@ -88,6 +91,22 @@ public class GuiEventHandler {
     private static Field tileEntityField;
     
     static {
+        Field xf = null, yf = null;
+        boolean ok = false;
+        try {
+            xf = GuiContainer.class.getDeclaredField("xSize");
+            yf = GuiContainer.class.getDeclaredField("ySize");
+            xf.setAccessible(true);
+            yf.setAccessible(true);
+            ok = true;
+        } catch (Exception ignored) {
+        }
+        XSIZE_FIELD = xf;
+        YSIZE_FIELD = yf;
+        REFLECT_OK = ok;
+    }
+    
+    static {
         try {
             selectedTypeField = GuiUpgradeManagement.class.getDeclaredField("selectedType");
             selectedTypeField.setAccessible(true);
@@ -104,20 +123,18 @@ public class GuiEventHandler {
     }
 
     public static int getGuiXSize(GuiScreen gui) {
-        return getGuiSize(gui, "xSize", FALLBACK_GUI_WIDTH);
+        return getGuiSize(gui, XSIZE_FIELD, FALLBACK_GUI_WIDTH);
     }
 
     public static int getGuiYSize(GuiScreen gui) {
-        return getGuiSize(gui, "ySize", FALLBACK_GUI_HEIGHT);
+        return getGuiSize(gui, YSIZE_FIELD, FALLBACK_GUI_HEIGHT);
     }
 
-    private static int getGuiSize(GuiScreen gui, String fieldName, int fallback) {
-        if (!(gui instanceof GuiContainer)) {
+    private static int getGuiSize(GuiScreen gui, Field field, int fallback) {
+        if (!(gui instanceof GuiContainer) || field == null || !REFLECT_OK) {
             return fallback;
         }
         try {
-            Field field = GuiContainer.class.getDeclaredField(fieldName);
-            field.setAccessible(true);
             return field.getInt(gui);
         } catch (Exception e) {
             return fallback;
@@ -469,7 +486,7 @@ public class GuiEventHandler {
     }
 
     private static String getCountText(int count) {
-        if (count >= 1000000) {
+        if (count >= 1024000) { // 1000 * 1024 threshold for 1M
             return count / 1000000 + "M";
         }
         if (count >= 1000) {

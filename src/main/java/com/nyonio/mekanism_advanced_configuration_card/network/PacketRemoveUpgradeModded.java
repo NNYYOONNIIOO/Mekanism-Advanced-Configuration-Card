@@ -58,8 +58,8 @@ public class PacketRemoveUpgradeModded implements IMessageHandler<PacketRemoveUp
             ItemStack upgradeStack = upgrade.getStack();
             int remaining = toRemove;
 
-            appeng.api.networking.storage.IStorageGrid ae2Storage = null;
-            appeng.api.networking.security.IActionSource ae2Source = null;
+            Object ae2Storage = null;
+            Object ae2Source = null;
             ItemStack boundConfigCard = findBoundConfigCard(player);
             if (boundConfigCard != null && AE2Compat.isAE2Loaded()) {
                 NBTTagCompound tag = boundConfigCard.getTagCompound();
@@ -129,58 +129,38 @@ public class PacketRemoveUpgradeModded implements IMessageHandler<PacketRemoveUp
 
     private int insertToCardSlotBags(EntityPlayer player, ItemStack upgradeStack, int remaining, List<BagRef> modifiedBags) {
         for (int i = 0; i < player.inventory.mainInventory.size() && remaining > 0; i++) {
-            ItemStack bagStack = player.inventory.mainInventory.get(i);
-            if (ItemCardSlotBag.isBag(bagStack)) {
-                ItemStackHandler handler = ItemCardSlotBag.readHandler(bagStack);
-                for (int slot = 0; slot < handler.getSlots() && remaining > 0; slot++) {
-                    ItemStack toInsert = ItemCardSlotBag.copyStackWithSize(upgradeStack, remaining);
-                    ItemStack result = handler.insertItem(slot, toInsert, false);
-                    if (result.isEmpty()) {
-                        remaining = 0;
-                    } else {
-                        remaining = result.getCount();
-                    }
-                }
-                ItemCardSlotBag.writeHandler(bagStack, handler);
-                modifiedBags.add(new BagRef(bagStack, i, false));
+            int before = remaining;
+            remaining = tryInsertToBag(player.inventory.mainInventory.get(i), upgradeStack, remaining);
+            if (remaining < before) {
+                modifiedBags.add(new BagRef(player.inventory.mainInventory.get(i), i, false));
             }
         }
         for (int i = 0; i < player.inventory.offHandInventory.size() && remaining > 0; i++) {
-            ItemStack bagStack = player.inventory.offHandInventory.get(i);
-            if (ItemCardSlotBag.isBag(bagStack)) {
-                ItemStackHandler handler = ItemCardSlotBag.readHandler(bagStack);
-                for (int slot = 0; slot < handler.getSlots() && remaining > 0; slot++) {
-                    ItemStack toInsert = ItemCardSlotBag.copyStackWithSize(upgradeStack, remaining);
-                    ItemStack result = handler.insertItem(slot, toInsert, false);
-                    if (result.isEmpty()) {
-                        remaining = 0;
-                    } else {
-                        remaining = result.getCount();
-                    }
-                }
-                ItemCardSlotBag.writeHandler(bagStack, handler);
-            }
+            remaining = tryInsertToBag(player.inventory.offHandInventory.get(i), upgradeStack, remaining);
         }
         if (remaining > 0 && BaublesCompat.isBaublesLoaded()) {
             int slot = BaublesCompat.findFirstBagSlot(player);
             if (slot >= 0) {
                 ItemStack bagStack = BaublesCompat.getStackInSlot(player, slot);
-                if (ItemCardSlotBag.isBag(bagStack)) {
-                    ItemStackHandler handler = ItemCardSlotBag.readHandler(bagStack);
-                    for (int s = 0; s < handler.getSlots() && remaining > 0; s++) {
-                        ItemStack toInsert = ItemCardSlotBag.copyStackWithSize(upgradeStack, remaining);
-                        ItemStack result = handler.insertItem(s, toInsert, false);
-                        if (result.isEmpty()) {
-                            remaining = 0;
-                        } else {
-                            remaining = result.getCount();
-                        }
-                    }
-                    ItemCardSlotBag.writeHandler(bagStack, handler);
+                int before = remaining;
+                remaining = tryInsertToBag(bagStack, upgradeStack, remaining);
+                if (remaining < before) {
                     modifiedBags.add(new BagRef(bagStack, slot, true));
                 }
             }
         }
+        return remaining;
+    }
+
+    private int tryInsertToBag(ItemStack bagStack, ItemStack upgradeStack, int remaining) {
+        if (!ItemCardSlotBag.isBag(bagStack)) return remaining;
+        ItemStackHandler handler = ItemCardSlotBag.readHandler(bagStack);
+        for (int slot = 0; slot < handler.getSlots() && remaining > 0; slot++) {
+            ItemStack toInsert = ItemCardSlotBag.copyStackWithSize(upgradeStack, remaining);
+            ItemStack result = handler.insertItem(slot, toInsert, false);
+            remaining = result.isEmpty() ? 0 : result.getCount();
+        }
+        ItemCardSlotBag.writeHandler(bagStack, handler);
         return remaining;
     }
 

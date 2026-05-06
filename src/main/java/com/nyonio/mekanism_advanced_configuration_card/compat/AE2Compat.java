@@ -44,7 +44,7 @@ public class AE2Compat {
         return tag.getString(AE2_NETWORK_KEY);
     }
     
-    public static IStorageGrid getStorageGridFromKey(String encryptionKey) {
+    public static Object getStorageGridFromKey(String encryptionKey) {
         if (!ae2Loaded || encryptionKey == null || encryptionKey.isEmpty()) {
             return null;
         }
@@ -66,15 +66,19 @@ public class AE2Compat {
         return null;
     }
     
-    public static IActionSource createActionSource(EntityPlayer player) {
+    public static Object createActionSource(EntityPlayer player) {
+        if (!ae2Loaded || player == null) {
+            return null;
+        }
         return new PlayerSource(player, null);
     }
     
-    public static long countItemInNetwork(IStorageGrid storage, Item item, int metadata) {
-        if (storage == null || item == null) {
+    public static long countItemInNetwork(Object storageHandle, Item item, int metadata) {
+        if (!ae2Loaded || !(storageHandle instanceof IStorageGrid) || item == null) {
             return 0;
         }
         try {
+            IStorageGrid storage = (IStorageGrid) storageHandle;
             IStorageChannel<IAEItemStack> channel = AEApi.instance().storage().getStorageChannel(appeng.api.storage.channels.IItemStorageChannel.class);
             if (channel == null) {
                 return 0;
@@ -96,11 +100,13 @@ public class AE2Compat {
         return 0;
     }
     
-    public static ItemStack extractItemFromNetwork(IStorageGrid storage, Item item, int metadata, int count, IActionSource source) {
-        if (storage == null || item == null || count <= 0) {
+    public static ItemStack extractItemFromNetwork(Object storageHandle, Item item, int metadata, int count, Object sourceHandle) {
+        if (!ae2Loaded || !(storageHandle instanceof IStorageGrid) || item == null || count <= 0) {
             return ItemStack.EMPTY;
         }
         try {
+            IStorageGrid storage = (IStorageGrid) storageHandle;
+            IActionSource source = sourceHandle instanceof IActionSource ? (IActionSource) sourceHandle : null;
             IStorageChannel<IAEItemStack> channel = AEApi.instance().storage().getStorageChannel(appeng.api.storage.channels.IItemStorageChannel.class);
             if (channel == null) {
                 return ItemStack.EMPTY;
@@ -122,11 +128,13 @@ public class AE2Compat {
         return ItemStack.EMPTY;
     }
     
-    public static int insertItemToNetwork(IStorageGrid storage, ItemStack stack, IActionSource source) {
-        if (storage == null || stack.isEmpty()) {
+    public static int insertItemToNetwork(Object storageHandle, ItemStack stack, Object sourceHandle) {
+        if (!ae2Loaded || !(storageHandle instanceof IStorageGrid) || stack.isEmpty()) {
             return 0;
         }
         try {
+            IStorageGrid storage = (IStorageGrid) storageHandle;
+            IActionSource source = sourceHandle instanceof IActionSource ? (IActionSource) sourceHandle : null;
             IStorageChannel<IAEItemStack> channel = AEApi.instance().storage().getStorageChannel(appeng.api.storage.channels.IItemStorageChannel.class);
             if (channel == null) {
                 return 0;
@@ -142,11 +150,11 @@ public class AE2Compat {
         return 0;
     }
     
-    public static ItemStack extractUpgradeFromNetwork(IStorageGrid storage, Upgrade upgrade, int count, IActionSource source) {
-        if (storage == null || upgrade == null) {
+    public static ItemStack extractUpgradeFromNetwork(Object storageHandle, Upgrade upgrade, int count, Object sourceHandle) {
+        if (!ae2Loaded || !(storageHandle instanceof IStorageGrid) || upgrade == null) {
             return ItemStack.EMPTY;
         }
         ItemStack upgradeStack = upgrade.getStack();
-        return extractItemFromNetwork(storage, upgradeStack.getItem(), upgradeStack.getMetadata(), count, source);
+        return extractItemFromNetwork(storageHandle, upgradeStack.getItem(), upgradeStack.getMetadata(), count, sourceHandle);
     }
 }

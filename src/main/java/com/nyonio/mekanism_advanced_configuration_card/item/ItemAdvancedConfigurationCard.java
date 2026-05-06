@@ -1,6 +1,5 @@
 package com.nyonio.mekanism_advanced_configuration_card.item;
 
-import appeng.api.features.INetworkEncodable;
 import com.nyonio.mekanism_advanced_configuration_card.ConfigCardUpgradeHelper;
 import com.nyonio.mekanism_advanced_configuration_card.MekConfigCardUpgradesMod;
 import com.nyonio.mekanism_advanced_configuration_card.compat.AE2Compat;
@@ -30,20 +29,16 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.world.World;
-import net.minecraftforge.fml.common.Optional;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
-@Optional.Interface(modid = "appliedenergistics2", iface = "appeng.api.features.INetworkEncodable")
-public class ItemAdvancedConfigurationCard extends Item implements INetworkEncodable {
+public class ItemAdvancedConfigurationCard extends Item {
     
     public ItemAdvancedConfigurationCard() {
         setMaxStackSize(1);
     }
     
-    @Override
-    @Optional.Method(modid = "appliedenergistics2")
     public String getEncryptionKey(ItemStack item) {
         NBTTagCompound tag = item.getTagCompound();
         if (tag != null && tag.hasKey(AE2Compat.AE2_NETWORK_KEY)) {
@@ -52,8 +47,6 @@ public class ItemAdvancedConfigurationCard extends Item implements INetworkEncod
         return "";
     }
     
-    @Override
-    @Optional.Method(modid = "appliedenergistics2")
     public void setEncryptionKey(ItemStack item, String encKey, String name) {
         NBTTagCompound tag = item.getTagCompound();
         if (tag == null) {

@@ -24,6 +24,8 @@ public class PacketBatchUpgrade implements IMessageHandler<PacketBatchUpgrade.Ba
 
     public static final int ACTION_UPGRADE = 0;
     public static final int ACTION_UNLOAD = 1;
+    // Baubles 1.12.2 typically has 7 slots, but we scan up to 64 as a safe upper bound
+    // to avoid hard dependency on BaublesAPI.getSlots() which may not exist in all versions
     private static final int MAX_BAUBLES_SLOTS = 64;
 
     @Override
@@ -106,10 +108,11 @@ public class PacketBatchUpgrade implements IMessageHandler<PacketBatchUpgrade.Ba
 
             if (remaining > 0) {
                 ItemStack toInsert = ItemCardSlotBag.copyStackWithSize(upgradeStack, remaining);
+                // Forge's addItemStackToInventory mutates the stack count on partial merge
                 if (player.inventory.addItemStackToInventory(toInsert)) {
                     remaining = 0;
                 } else {
-                    remaining = toInsert.getCount();
+                    remaining = toInsert.getCount(); // captures remaining after partial merge or full reject
                 }
             }
 
@@ -126,17 +129,6 @@ public class PacketBatchUpgrade implements IMessageHandler<PacketBatchUpgrade.Ba
                 }
             }
         }
-    }
-
-    private int countInHandler(ItemStackHandler handler, ItemStack stack) {
-        int total = 0;
-        for (int i = 0; i < handler.getSlots(); i++) {
-            ItemStack inSlot = handler.getStackInSlot(i);
-            if (!inSlot.isEmpty() && inSlot.isItemEqual(stack) && ItemStack.areItemStackTagsEqual(inSlot, stack)) {
-                total += inSlot.getCount();
-            }
-        }
-        return total;
     }
 
     private int consumeUpgradeFromBags(List<BagRef> bagRefs, List<BagRef> modifiedBags, ItemStack stack, int amount) {
@@ -231,7 +223,7 @@ public class PacketBatchUpgrade implements IMessageHandler<PacketBatchUpgrade.Ba
     private void addModifiedBag(List<BagRef> modifiedBags, BagRef bagRef) {
         if (bagRef == null || !bagRef.syncPacket) return;
         for (BagRef modifiedBag : modifiedBags) {
-            if (modifiedBag.stack == bagRef.stack && modifiedBag.slot == bagRef.slot && modifiedBag.isBaubles == bagRef.isBaubles) {
+            if (modifiedBag.slot == bagRef.slot && modifiedBag.isBaubles == bagRef.isBaubles) {
                 return;
             }
         }

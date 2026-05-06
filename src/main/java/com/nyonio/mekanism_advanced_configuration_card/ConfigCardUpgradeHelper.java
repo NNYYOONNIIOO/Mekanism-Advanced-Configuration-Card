@@ -466,8 +466,8 @@ public final class ConfigCardUpgradeHelper {
             return null;
         }
         
-        appeng.api.networking.storage.IStorageGrid ae2Storage = null;
-        appeng.api.networking.security.IActionSource ae2Source = null;
+        Object ae2Storage = null;
+        Object ae2Source = null;
         if (AE2Compat.isAE2Loaded() && configCard != null && !configCard.isEmpty()) {
             NBTTagCompound tag = configCard.getTagCompound();
             if (AE2Compat.hasNetworkKey(tag)) {
@@ -531,7 +531,10 @@ public final class ConfigCardUpgradeHelper {
             } else if (compositeCountInBags > 0) {
                 ItemCardSlotBag.consumeFromBags(player.inventory, new ItemStack(compositeTierInstaller), 1);
             } else if (ae2Storage != null && ae2Source != null) {
-                AE2Compat.extractItemFromNetwork(ae2Storage, compositeTierInstaller, 0, 1, ae2Source);
+                ItemStack extracted = AE2Compat.extractItemFromNetwork(ae2Storage, compositeTierInstaller, 0, 1, ae2Source);
+                if (extracted.isEmpty()) {
+                    return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.missing_tier_installers");
+                }
             }
             player.inventoryContainer.detectAndSendChanges();
             return null;
@@ -557,6 +560,9 @@ public final class ConfigCardUpgradeHelper {
                 if (!extracted.isEmpty()) {
                     consumed = true;
                 }
+            }
+            if (!consumed) {
+                return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.missing_tier_installers") + ": " + getLocalizedTierName(requiredTier);
             }
             tempTierOrdinal++;
         }
@@ -633,8 +639,8 @@ public final class ConfigCardUpgradeHelper {
             return null;
         }
         
-        appeng.api.networking.storage.IStorageGrid ae2Storage = null;
-        appeng.api.networking.security.IActionSource ae2Source = null;
+        Object ae2Storage = null;
+        Object ae2Source = null;
         if (AE2Compat.isAE2Loaded() && configCard != null && !configCard.isEmpty()) {
             NBTTagCompound tag = configCard.getTagCompound();
             if (AE2Compat.hasNetworkKey(tag)) {
@@ -698,7 +704,10 @@ public final class ConfigCardUpgradeHelper {
             } else if (compositeCountInBags > 0) {
                 ItemCardSlotBag.consumeFromBags(player.inventory, new ItemStack(compositeTierInstaller), 1);
             } else if (ae2Storage != null && ae2Source != null) {
-                AE2Compat.extractItemFromNetwork(ae2Storage, compositeTierInstaller, 0, 1, ae2Source);
+                ItemStack extracted = AE2Compat.extractItemFromNetwork(ae2Storage, compositeTierInstaller, 0, 1, ae2Source);
+                if (extracted.isEmpty()) {
+                    return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.missing_tier_installers");
+                }
             }
             player.inventoryContainer.detectAndSendChanges();
             return null;
@@ -712,12 +721,21 @@ public final class ConfigCardUpgradeHelper {
             int countInInventory = countInInventory(player.inventory, tierInstallerStack.getItem(), tierInstallerStack.getMetadata());
             int countInBags = ItemCardSlotBag.countInBags(player.inventory, tierInstallerStack);
             
+            boolean consumed = false;
             if (countInInventory > 0) {
                 removeFromInventory(player.inventory, tierInstallerStack.getItem(), tierInstallerStack.getMetadata(), 1);
+                consumed = true;
             } else if (countInBags > 0) {
                 ItemCardSlotBag.consumeFromBags(player.inventory, tierInstallerStack, 1);
+                consumed = true;
             } else if (ae2Storage != null && ae2Source != null) {
-                AE2Compat.extractItemFromNetwork(ae2Storage, tierInstallerStack.getItem(), tierInstallerStack.getMetadata(), 1, ae2Source);
+                ItemStack extracted = AE2Compat.extractItemFromNetwork(ae2Storage, tierInstallerStack.getItem(), tierInstallerStack.getMetadata(), 1, ae2Source);
+                if (!extracted.isEmpty()) {
+                    consumed = true;
+                }
+            }
+            if (!consumed) {
+                return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.missing_tier_installers") + ": " + getLocalizedTierName(requiredTier);
             }
             tempTierOrdinal++;
         }
@@ -749,8 +767,8 @@ public final class ConfigCardUpgradeHelper {
             return null;
         }
         
-        appeng.api.networking.storage.IStorageGrid ae2Storage = null;
-        appeng.api.networking.security.IActionSource ae2Source = null;
+        Object ae2Storage = null;
+        Object ae2Source = null;
         if (AE2Compat.isAE2Loaded() && configCard != null && !configCard.isEmpty()) {
             NBTTagCompound tag = configCard.getTagCompound();
             if (AE2Compat.hasNetworkKey(tag)) {
@@ -783,7 +801,10 @@ public final class ConfigCardUpgradeHelper {
             } else if (compositeCountInBags > 0) {
                 ItemCardSlotBag.consumeFromBags(player.inventory, new ItemStack(compositeTierInstaller), 1);
             } else if (ae2Storage != null && ae2Source != null) {
-                AE2Compat.extractItemFromNetwork(ae2Storage, compositeTierInstaller, 0, 1, ae2Source);
+                ItemStack extracted = AE2Compat.extractItemFromNetwork(ae2Storage, compositeTierInstaller, 0, 1, ae2Source);
+                if (extracted.isEmpty()) {
+                    return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.missing_tier_installers");
+                }
             }
             player.inventoryContainer.detectAndSendChanges();
             return null;
@@ -818,12 +839,21 @@ public final class ConfigCardUpgradeHelper {
                     int countInInventory = countInInventory(player.inventory, tierInstaller, requiredTier.ordinal());
                     int countInBags = ItemCardSlotBag.countInBags(player.inventory, new ItemStack(tierInstaller, 1, requiredTier.ordinal()));
                     
+                    boolean consumed = false;
                     if (countInInventory > 0) {
                         removeFromInventory(player.inventory, tierInstaller, requiredTier.ordinal(), 1);
+                        consumed = true;
                     } else if (countInBags > 0) {
                         ItemCardSlotBag.consumeFromBags(player.inventory, new ItemStack(tierInstaller, 1, requiredTier.ordinal()), 1);
+                        consumed = true;
                     } else if (ae2Storage != null && ae2Source != null) {
-                        AE2Compat.extractItemFromNetwork(ae2Storage, tierInstaller, requiredTier.ordinal(), 1, ae2Source);
+                        ItemStack extracted = AE2Compat.extractItemFromNetwork(ae2Storage, tierInstaller, requiredTier.ordinal(), 1, ae2Source);
+                        if (!extracted.isEmpty()) {
+                            consumed = true;
+                        }
+                    }
+                    if (!consumed) {
+                        return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.missing_tier_installers") + ": " + getLocalizedTierName(requiredTier);
                     }
                     tempTierOrdinal++;
                 }
@@ -963,7 +993,7 @@ public final class ConfigCardUpgradeHelper {
         boolean hasInfinite = InfiniteUpgradeCardCompat.hasInfiniteUpgrade(player, configCard);
         TileComponentUpgrade component = tile.getComponent();
         Map<Upgrade, Integer> desired = getStoredUpgrades(data);
-        InventorySimulation inventory = new InventorySimulation(player.inventory, configCard);
+        InventorySimulation inventory = null;
         for (Upgrade upgrade : Upgrade.values()) {
             if (upgrade == Upgrade.ANCHOR) continue;
             int current = component.getUpgrades(upgrade);
@@ -980,6 +1010,9 @@ public final class ConfigCardUpgradeHelper {
             if (!player.isCreative()) {
                 if (hasSuperInfinite) continue;
                 if (hasInfinite && (upgrade == Upgrade.SPEED || upgrade == Upgrade.ENERGY)) continue;
+                if (inventory == null) {
+                    inventory = new InventorySimulation(player.inventory, configCard);
+                }
                 if (actualTarget > current && !inventory.remove(upgrade.getStack(), actualTarget - current)) {
                     return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.missing_upgrade") + ": " + upgrade.getName();
                 }
@@ -999,7 +1032,7 @@ public final class ConfigCardUpgradeHelper {
         boolean hasInfinite = InfiniteUpgradeCardCompat.hasInfiniteUpgrade(player, configCard);
         TileComponentUpgrade component = tile.getComponent();
         Map<Upgrade, Integer> desired = getStoredUpgrades(data);
-        InventorySimulation inventory = new InventorySimulation(player.inventory, configCard);
+        InventorySimulation inventory = null;
         for (Upgrade upgrade : Upgrade.values()) {
             if (upgrade == Upgrade.ANCHOR) continue;
             if (!component.supports(upgrade)) {
@@ -1010,6 +1043,9 @@ public final class ConfigCardUpgradeHelper {
             if (!player.isCreative()) {
                 if (hasSuperInfinite) continue;
                 if (hasInfinite && (upgrade == Upgrade.SPEED || upgrade == Upgrade.ENERGY)) continue;
+                if (inventory == null) {
+                    inventory = new InventorySimulation(player.inventory, configCard);
+                }
                 if (target > current && !inventory.remove(upgrade.getStack(), target - current)) {
                     return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.missing_upgrade") + ": " + upgrade.getName();
                 }
@@ -1029,9 +1065,17 @@ public final class ConfigCardUpgradeHelper {
             return null;
         }
         TileComponentUpgrade component = tile.getComponent();
-        InventorySimulation inventory = new InventorySimulation(player.inventory, configCard);
+        boolean hasSuperInfinite = InfiniteUpgradeCardCompat.hasSuperInfiniteUpgrade(player, configCard);
+        boolean hasInfinite = InfiniteUpgradeCardCompat.hasInfiniteUpgrade(player, configCard);
+        InventorySimulation inventory = null;
         for (Upgrade upgrade : Upgrade.values()) {
             int current = component.getUpgrades(upgrade);
+            if (isCoveredByInfiniteUpgrade(upgrade, hasSuperInfinite, hasInfinite)) {
+                continue;
+            }
+            if (inventory == null) {
+                inventory = new InventorySimulation(player.inventory, configCard);
+            }
             if (current > 0 && !inventory.insert(getUpgradeStack(upgrade, current))) {
                 return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.inventory_full");
             }
@@ -1044,29 +1088,21 @@ public final class ConfigCardUpgradeHelper {
             return;
         }
         boolean hasSuperInfinite = InfiniteUpgradeCardCompat.hasSuperInfiniteUpgrade(player, configCard);
+        if (hasSuperInfinite) {
+            return;
+        }
         boolean hasInfinite = InfiniteUpgradeCardCompat.hasInfiniteUpgrade(player, configCard);
         TileComponentUpgrade component = tile.getComponent();
         Map<Upgrade, Integer> desired = getStoredUpgrades(data);
-        
-        appeng.api.networking.storage.IStorageGrid ae2Storage = null;
-        appeng.api.networking.security.IActionSource ae2Source = null;
-        if (AE2Compat.isAE2Loaded() && configCard != null && !configCard.isEmpty()) {
-            NBTTagCompound tag = configCard.getTagCompound();
-            if (AE2Compat.hasNetworkKey(tag)) {
-                String key = AE2Compat.getNetworkKey(tag);
-                ae2Storage = AE2Compat.getStorageGridFromKey(key);
-                if (ae2Storage != null) {
-                    ae2Source = AE2Compat.createActionSource(player);
-                }
-            }
-        }
-        
+
+        Object ae2Storage = null;
+        Object ae2Source = null;
+
         for (Upgrade upgrade : Upgrade.values()) {
             if (upgrade == Upgrade.ANCHOR) continue;
             if (!component.supports(upgrade)) {
                 continue;
             }
-            if (hasSuperInfinite) continue;
             if (hasInfinite && (upgrade == Upgrade.SPEED || upgrade == Upgrade.ENERGY)) continue;
             int current = component.getUpgrades(upgrade);
             int target = desired.containsKey(upgrade) ? desired.get(upgrade) : 0;
@@ -1079,12 +1115,19 @@ public final class ConfigCardUpgradeHelper {
             if (actualTarget > current) {
                 int needed = actualTarget - current;
                 ItemStack upgradeStack = upgrade.getStack();
-                
+
+                if (ae2Storage == null) {
+                    ae2Storage = getAE2Storage(configCard);
+                    if (ae2Storage != null) {
+                        ae2Source = AE2Compat.createActionSource(player);
+                    }
+                }
+
                 long fromNetwork = 0;
                 if (ae2Storage != null) {
                     fromNetwork = AE2Compat.countItemInNetwork(ae2Storage, upgradeStack.getItem(), upgradeStack.getMetadata());
                 }
-                
+
                 int fromInventory = countInInventory(player.inventory, upgradeStack.getItem(), upgradeStack.getMetadata());
                 int fromBags = ItemCardSlotBag.countInBags(player.inventory, upgradeStack);
                 long totalAvailable = fromNetwork + fromInventory + fromBags;
@@ -1132,19 +1175,6 @@ public final class ConfigCardUpgradeHelper {
         boolean hasSuperInfinite = InfiniteUpgradeCardCompat.hasSuperInfiniteUpgrade(player, configCard);
         boolean hasInfinite = InfiniteUpgradeCardCompat.hasInfiniteUpgrade(player, configCard);
 
-        appeng.api.networking.storage.IStorageGrid ae2Storage = null;
-        appeng.api.networking.security.IActionSource ae2Source = null;
-        if (AE2Compat.isAE2Loaded() && configCard != null && !configCard.isEmpty()) {
-            NBTTagCompound tag = configCard.getTagCompound();
-            if (AE2Compat.hasNetworkKey(tag)) {
-                String key = AE2Compat.getNetworkKey(tag);
-                ae2Storage = AE2Compat.getStorageGridFromKey(key);
-                if (ae2Storage != null) {
-                    ae2Source = AE2Compat.createActionSource(player);
-                }
-            }
-        }
-
         for (Upgrade upgrade : Upgrade.values()) {
             if (upgrade == Upgrade.ANCHOR) continue;
             if (!component.supports(upgrade)) {
@@ -1162,7 +1192,7 @@ public final class ConfigCardUpgradeHelper {
                 int toRemove = current - actualTarget;
                 ItemStack upgradeStack = upgrade.getStack();
                 
-                if (player.isCreative()) {
+                if (player.isCreative() || isCoveredByInfiniteUpgrade(upgrade, hasSuperInfinite, hasInfinite)) {
                     for (int i = 0; i < toRemove; i++) {
                         component.removeUpgrade(upgrade, false);
                     }
@@ -1212,8 +1242,7 @@ public final class ConfigCardUpgradeHelper {
                     continue;
                 }
 
-                ItemStack upgradeStack = upgrade.getStack();
-                int consumed = consumeUpgradeFromSources(player, upgrade, needed, ae2Storage, ae2Source);
+                int consumed = consumeUpgradeFromSources(player, upgrade, needed, configCard);
 
                 if (consumed > 0) {
                     if (ModConfig.limitSavedUpgradeCount) {
@@ -1227,16 +1256,26 @@ public final class ConfigCardUpgradeHelper {
         player.inventoryContainer.detectAndSendChanges();
     }
 
-    private static int consumeUpgradeFromSources(EntityPlayer player, Upgrade upgrade, int needed, appeng.api.networking.storage.IStorageGrid ae2Storage, appeng.api.networking.security.IActionSource ae2Source) {
+    private static int consumeUpgradeFromSources(EntityPlayer player, Upgrade upgrade, int needed, ItemStack configCard) {
         List<ModConfig.SourcePriority> priorities = ModConfig.getUpgradeSourcePriorityList();
         int remaining = needed;
         ItemStack upgradeStack = upgrade.getStack();
+        Object ae2Storage = null;
+        Object ae2Source = null;
 
         for (ModConfig.SourcePriority priority : priorities) {
             if (remaining <= 0) break;
 
             switch (priority) {
                 case NETWORK:
+                    if (remaining > 0) {
+                        if (ae2Storage == null) {
+                            ae2Storage = getAE2Storage(configCard);
+                            if (ae2Storage != null) {
+                                ae2Source = AE2Compat.createActionSource(player);
+                            }
+                        }
+                    }
                     if (ae2Storage != null && ae2Source != null && remaining > 0) {
                         long available = AE2Compat.countItemInNetwork(ae2Storage, upgradeStack.getItem(), upgradeStack.getMetadata());
                         if (available > 0) {
@@ -1290,6 +1329,36 @@ public final class ConfigCardUpgradeHelper {
         }
     }
 
+    private static boolean isCoveredByInfiniteUpgrade(Upgrade upgrade, boolean hasSuperInfinite, boolean hasInfinite) {
+        if (hasSuperInfinite) {
+            return true;
+        }
+        return hasInfinite && (upgrade == Upgrade.SPEED || upgrade == Upgrade.ENERGY);
+    }
+
+    private static boolean shouldUseNetworkSource() {
+        return ModConfig.getUpgradeSourcePriorityList().contains(ModConfig.SourcePriority.NETWORK);
+    }
+
+    private static boolean shouldUseNetworkReturn() {
+        return ModConfig.getUpgradeReturnPriorityList().contains(ModConfig.SourcePriority.NETWORK);
+    }
+
+    private static Object getAE2Storage(ItemStack configCard) {
+        if (!AE2Compat.isAE2Loaded() || configCard == null || configCard.isEmpty()) {
+            return null;
+        }
+        NBTTagCompound tag = configCard.getTagCompound();
+        if (!AE2Compat.hasNetworkKey(tag)) {
+            return null;
+        }
+        String key = AE2Compat.getNetworkKey(tag);
+        if (key == null || key.isEmpty()) {
+            return null;
+        }
+        return AE2Compat.getStorageGridFromKey(key);
+    }
+
     public static void applyFuzzyStoredUpgrades(EntityPlayer player, IUpgradeTile tile, NBTTagCompound data, ItemStack configCard) {
         if (!tile.supportsUpgrades()) {
             return;
@@ -1298,19 +1367,6 @@ public final class ConfigCardUpgradeHelper {
         Map<Upgrade, Integer> desired = getStoredUpgrades(data);
         boolean hasSuperInfinite = InfiniteUpgradeCardCompat.hasSuperInfiniteUpgrade(player, configCard);
         boolean hasInfinite = InfiniteUpgradeCardCompat.hasInfiniteUpgrade(player, configCard);
-
-        appeng.api.networking.storage.IStorageGrid ae2Storage = null;
-        appeng.api.networking.security.IActionSource ae2Source = null;
-        if (AE2Compat.isAE2Loaded() && configCard != null && !configCard.isEmpty()) {
-            NBTTagCompound tag = configCard.getTagCompound();
-            if (AE2Compat.hasNetworkKey(tag)) {
-                String key = AE2Compat.getNetworkKey(tag);
-                ae2Storage = AE2Compat.getStorageGridFromKey(key);
-                if (ae2Storage != null) {
-                    ae2Source = AE2Compat.createActionSource(player);
-                }
-            }
-        }
 
         for (Upgrade upgrade : Upgrade.values()) {
             if (upgrade == Upgrade.ANCHOR) continue;
@@ -1324,7 +1380,7 @@ public final class ConfigCardUpgradeHelper {
                 int toRemove = current - target;
                 ItemStack upgradeStack = upgrade.getStack();
                 
-                if (player.isCreative()) {
+                if (player.isCreative() || isCoveredByInfiniteUpgrade(upgrade, hasSuperInfinite, hasInfinite)) {
                     for (int i = 0; i < toRemove; i++) {
                         component.removeUpgrade(upgrade, false);
                     }
@@ -1368,8 +1424,7 @@ public final class ConfigCardUpgradeHelper {
                     continue;
                 }
 
-                ItemStack upgradeStack = upgrade.getStack();
-                int consumed = consumeUpgradeFromSources(player, upgrade, needed, ae2Storage, ae2Source);
+                int consumed = consumeUpgradeFromSources(player, upgrade, needed, configCard);
 
                 if (consumed > 0) {
                     component.addUpgrades(upgrade, consumed);
@@ -1384,6 +1439,8 @@ public final class ConfigCardUpgradeHelper {
             return;
         }
         TileComponentUpgrade component = tile.getComponent();
+        boolean hasSuperInfinite = InfiniteUpgradeCardCompat.hasSuperInfiniteUpgrade(player, configCard);
+        boolean hasInfinite = InfiniteUpgradeCardCompat.hasInfiniteUpgrade(player, configCard);
         
         for (Upgrade upgrade : Upgrade.values()) {
             int current = component.getUpgrades(upgrade);
@@ -1391,7 +1448,7 @@ public final class ConfigCardUpgradeHelper {
             
             ItemStack upgradeStack = upgrade.getStack();
             
-            if (player.isCreative()) {
+            if (player.isCreative() || isCoveredByInfiniteUpgrade(upgrade, hasSuperInfinite, hasInfinite)) {
                 for (int i = 0; i < current; i++) {
                     component.removeUpgrade(upgrade, false);
                 }
@@ -1564,25 +1621,21 @@ public final class ConfigCardUpgradeHelper {
         int remaining = stack.getCount();
         java.util.List<ModConfig.SourcePriority> priorities = ModConfig.getUpgradeReturnPriorityList();
         
-        appeng.api.networking.storage.IStorageGrid ae2Storage = null;
-        appeng.api.networking.security.IActionSource ae2Source = null;
-        if (AE2Compat.isAE2Loaded() && configCard != null && !configCard.isEmpty()) {
-            NBTTagCompound tag = configCard.getTagCompound();
-            if (AE2Compat.hasNetworkKey(tag)) {
-                String key = AE2Compat.getNetworkKey(tag);
-                ae2Storage = AE2Compat.getStorageGridFromKey(key);
-                if (ae2Storage != null) {
-                    ae2Source = AE2Compat.createActionSource(inventory.player);
-                }
-            }
-        }
+        Object ae2Storage = null;
+        Object ae2Source = null;
         
         for (ModConfig.SourcePriority priority : priorities) {
             if (remaining <= 0) break;
             
             switch (priority) {
                 case NETWORK:
-                    if (ae2Storage != null && remaining > 0) {
+                    if (remaining > 0 && ae2Storage == null) {
+                        ae2Storage = getAE2Storage(configCard);
+                        if (ae2Storage != null) {
+                            ae2Source = AE2Compat.createActionSource(inventory.player);
+                        }
+                    }
+                    if (ae2Storage != null && ae2Source != null && remaining > 0) {
                         ItemStack toInsert = ItemCardSlotBag.copyStackWithSize(stack, remaining);
                         int inserted = AE2Compat.insertItemToNetwork(ae2Storage, toInsert, ae2Source);
                         remaining -= inserted;
@@ -1668,27 +1721,14 @@ public final class ConfigCardUpgradeHelper {
     private static final class InventorySimulation {
         private final List<ItemStack> slots = new ArrayList<>();
         private final java.util.Set<Integer> bagSlotIndices = new java.util.HashSet<>();
-        private final appeng.api.networking.storage.IStorageGrid ae2Storage;
-        private final appeng.api.networking.security.IActionSource ae2Source;
+        private final ItemStack configCard;
+        private Object ae2Storage;
+        private Object ae2Source;
         private final EntityPlayer player;
 
         private InventorySimulation(InventoryPlayer inventory, ItemStack configCard) {
             this.player = inventory.player;
-            
-            appeng.api.networking.storage.IStorageGrid tempStorage = null;
-            appeng.api.networking.security.IActionSource tempSource = null;
-            if (AE2Compat.isAE2Loaded() && configCard != null && !configCard.isEmpty()) {
-                NBTTagCompound tag = configCard.getTagCompound();
-                if (AE2Compat.hasNetworkKey(tag)) {
-                    String key = AE2Compat.getNetworkKey(tag);
-                    tempStorage = AE2Compat.getStorageGridFromKey(key);
-                    if (tempStorage != null) {
-                        tempSource = AE2Compat.createActionSource(inventory.player);
-                    }
-                }
-            }
-            this.ae2Storage = tempStorage;
-            this.ae2Source = tempSource;
+            this.configCard = configCard;
             
             for (ItemStack stack : inventory.mainInventory) {
                 if (ItemCardSlotBag.isBag(stack)) {
@@ -1729,6 +1769,16 @@ public final class ConfigCardUpgradeHelper {
             }
         }
 
+        private void resolveAE2Storage(boolean useNetwork) {
+            if (ae2Storage != null || !useNetwork) {
+                return;
+            }
+            ae2Storage = getAE2Storage(configCard);
+            if (ae2Storage != null) {
+                ae2Source = AE2Compat.createActionSource(player);
+            }
+        }
+
         private boolean remove(ItemStack stack, int amount) {
             long available = 0;
             for (ItemStack slot : slots) {
@@ -1737,6 +1787,7 @@ public final class ConfigCardUpgradeHelper {
                 }
             }
             long fromNetwork = 0;
+            resolveAE2Storage(shouldUseNetworkSource());
             if (ae2Storage != null) {
                 fromNetwork = AE2Compat.countItemInNetwork(ae2Storage, stack.getItem(), stack.getMetadata());
                 available += fromNetwork;
@@ -1761,6 +1812,7 @@ public final class ConfigCardUpgradeHelper {
         private boolean insert(ItemStack stack) {
             int remaining = stack.getCount();
             
+            resolveAE2Storage(shouldUseNetworkReturn());
             if (ae2Storage != null && ae2Source != null) {
                 ItemStack toInsert = ItemCardSlotBag.copyStackWithSize(stack, remaining);
                 int inserted = AE2Compat.insertItemToNetwork(ae2Storage, toInsert, ae2Source);
