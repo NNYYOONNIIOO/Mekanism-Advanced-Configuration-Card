@@ -36,3 +36,6 @@ Thumbs.db
 /src/gradle.properties
 /src/gradlew
 /src/gradlew.bat
+
+# AI context snapshot
+project_context.json

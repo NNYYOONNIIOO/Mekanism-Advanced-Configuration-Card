@@ -1,5 +1,7 @@
 package com.nyonio.mekanism_advanced_configuration_card.gui;
 
+import com.cleanroommc.bogosorter.api.ISortableContainer;
+import com.cleanroommc.bogosorter.api.ISortingContextBuilder;
 import com.nyonio.mekanism_advanced_configuration_card.compat.BaublesCompat;
 import com.nyonio.mekanism_advanced_configuration_card.item.ItemCardSlotBag;
 import invtweaks.api.container.ChestContainer;
@@ -8,11 +10,13 @@ import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fml.common.Optional;
 import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.items.SlotItemHandler;
 
 @ChestContainer(rowSize = 9, showButtons = true)
-public class ContainerCardSlotBag extends Container {
+@Optional.Interface(modid = "bogosorter", iface = "com.cleanroommc.bogosorter.api.ISortableContainer")
+public class ContainerCardSlotBag extends Container implements ISortableContainer {
     private final ItemStack bagStack;
     private final ItemStackHandler handler;
     private final int bagSlotIndex;
@@ -108,6 +112,12 @@ public class ContainerCardSlotBag extends Container {
         }
         ItemStack stackInSlot = player.inventory.mainInventory.get(bagSlotIndex);
         return !stackInSlot.isEmpty() && stackInSlot.getItem() == bagStack.getItem();
+    }
+    
+    @Optional.Method(modid = "bogosorter")
+    @Override
+    public void buildSortingContext(ISortingContextBuilder builder) {
+        builder.addSlotGroup(0, 27, 9);
     }
     
     @Override
