@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "PPP",
+    "PCP",
+    "PPP"
+  ],
+  "key": {
+    "P": {
+      "item": "mekanism:hdpe_sheet"
+    },
+    "C": {
+      "item": "mekanism:configurationcard"
+    }
+  },
+  "result": {
+    "item": "mekanism_advanced_configuration_card:card_slot_bag",
+    "count": 1
+  }
+}

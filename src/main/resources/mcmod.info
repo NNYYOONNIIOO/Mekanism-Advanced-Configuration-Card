@@ -1,0 +1,16 @@
+[
+  {
+    "modid": "mekanism_advanced_configuration_card",
+    "name": "Mekanism Advanced Configuration Card",
+    "description": "Add a configuration card that copies upgrades/levels.",
+    "version": "1.0.5.1",
+    "mcversion": "1.12.2",
+    "url": "",
+    "updateUrl": "",
+    "authorList": ["Nyonio"],
+    "credits": "Inspired by Mekanism-Config-Card-Upgrades.",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": ["required-after:mekanism;"]
+  }
+]
