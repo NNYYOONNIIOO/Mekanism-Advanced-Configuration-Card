@@ -171,13 +171,17 @@ public class MoreMachineCompat {
         if (data instanceof IUpgradeData) {
             return (IUpgradeData) data;
         }
+        IUpgradeData firstTierData = createFirstChemicalInfuserUpgradeData(tile, tier);
+        if (firstTierData != null) {
+            return firstTierData;
+        }
         if (tile instanceof IUpgradeableTile) {
             IUpgradeData upgradeData = ((IUpgradeableTile) tile).getUpgradeData(tier);
             if (upgradeData != null) {
                 return upgradeData;
             }
         }
-        return createFirstChemicalInfuserUpgradeData(tile, tier);
+        return null;
     }
 
     public static IBlockState getUpgradeResult(TileEntity tile, BaseTier tier) {
@@ -186,13 +190,17 @@ public class MoreMachineCompat {
         if (result instanceof IBlockState) {
             return (IBlockState) result;
         }
+        IBlockState firstTierResult = getFirstChemicalInfuserUpgradeResult(tile, tier);
+        if (firstTierResult != null) {
+            return firstTierResult;
+        }
         if (tile instanceof IUpgradeableTile) {
             IBlockState upgradeResult = ((IUpgradeableTile) tile).getUpgradeResult(tier);
             if (upgradeResult != null) {
                 return upgradeResult;
             }
         }
-        return getFirstChemicalInfuserUpgradeResult(tile, tier);
+        return null;
     }
 
     /**

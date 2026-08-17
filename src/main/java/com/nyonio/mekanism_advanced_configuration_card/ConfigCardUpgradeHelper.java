@@ -310,8 +310,13 @@ public final class ConfigCardUpgradeHelper {
             }
         }
         
+        boolean sourceIsFactory = TileEntityFactory.class.isAssignableFrom(storedType);
+        boolean factoryCardCanUpgradeTarget = (hasFactoryData(data) || sourceIsFactory)
+              && !(tile instanceof TileEntityFactory)
+              && (tile instanceof IUpgradeableTile || MoreMachineCompat.canConvertToMoreMachine(tile));
         if (!isConfigurationCompatible(tile, storedType, data)
-              && !MoreMachineCompat.canConvertToMoreMachine(storedType, tile)) {
+              && !MoreMachineCompat.canConvertToMoreMachine(storedType, tile)
+              && !factoryCardCanUpgradeTarget) {
             return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.type_mismatch");
         }
         IUpgradeTile upgradeTile = null;
@@ -332,6 +337,7 @@ public final class ConfigCardUpgradeHelper {
         }
         TileEntityFactory upgradedFactory = null;
         boolean convertedToMoreMachine = false;
+        boolean convertedFactoryToMoreMachine = false;
         if (hasFactoryData(data) && tile instanceof TileEntityFactory) {
             TileEntityFactory targetFactory = (TileEntityFactory) tile;
             int storedTierOrdinal = getStoredFactoryTier(data);
@@ -386,24 +392,31 @@ public final class ConfigCardUpgradeHelper {
               && (tile instanceof IUpgradeableTile || MoreMachineCompat.isUpgradeable(tile))
               && !MoreMachineCompat.isTierMachine(tile)) {
             int storedTierOrdinal = getStoredFactoryTier(data);
-            String failure = validateAndConsumeTierInstallersForUpgradeableMachine(player, tile, storedTierOrdinal, stack);
+            boolean convertsToMoreMachine = MoreMachineCompat.canConvertToMoreMachine(tile);
+            int requestedTierOrdinal = convertsToMoreMachine ? BaseTier.BASIC.ordinal() : storedTierOrdinal;
+            String failure = validateAndConsumeTierInstallersForUpgradeableMachine(player, tile, requestedTierOrdinal, stack);
             if (failure != null) {
                 return failure;
             }
             // A normal machine may need to become either a MoreMachine tier
             // block or a normal Mekanism factory. The upgrade helper selects
             // the correct adapter from the target block state.
-            performUpgradeableMachineUpgrade(player, tile, storedTierOrdinal, true);
+            performUpgradeableMachineUpgrade(player, tile, requestedTierOrdinal, true);
             TileEntity updatedTile = tile.getWorld() == null ? null : tile.getWorld().getTileEntity(tile.getPos());
             if (updatedTile == null
-                  || (!(updatedTile instanceof TileEntityFactory) && !MoreMachineCompat.isTierMachine(updatedTile))) {
+                  || (convertsToMoreMachine
+                  ? !MoreMachineCompat.isTierMachine(updatedTile)
+                  : !(updatedTile instanceof TileEntityFactory))) {
                 return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.cannot_upgrade");
             }
             int updatedTierOrdinal = updatedTile instanceof TileEntityFactory
                   ? ((TileEntityFactory) updatedTile).tier.ordinal()
                   : MoreMachineCompat.getTierOrdinal(updatedTile);
-            if (updatedTierOrdinal < storedTierOrdinal) {
+            if (!convertsToMoreMachine && updatedTierOrdinal < requestedTierOrdinal) {
                 return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.cannot_upgrade");
+            }
+            if (convertsToMoreMachine) {
+                convertedFactoryToMoreMachine = true;
             }
             tile = updatedTile;
             configCardAccess = CapabilityUtils.getCapability(tile, Capabilities.SPECIAL_CONFIG_DATA_CAPABILITY, side);
@@ -447,7 +460,9 @@ public final class ConfigCardUpgradeHelper {
             }
         }
         // Handle Factory -> MoreMachine tier conversion
-        if (MoreMachineCompat.isMoreMachineLoaded() && hasFactoryData(data) && !(tile instanceof TileEntityFactory) && MoreMachineCompat.isTierMachine(tile)) {
+        if (MoreMachineCompat.isMoreMachineLoaded() && hasFactoryData(data)
+              && !(tile instanceof TileEntityFactory) && MoreMachineCompat.isTierMachine(tile)
+              && !convertedFactoryToMoreMachine) {
             int storedTierOrdinal = getStoredFactoryTier(data);
             int currentTierOrdinal = MoreMachineCompat.getTierOrdinal(tile);
             if (currentTierOrdinal >= 0 && storedTierOrdinal > currentTierOrdinal) {
