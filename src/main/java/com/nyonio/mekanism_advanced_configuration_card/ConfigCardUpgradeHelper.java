@@ -382,13 +382,37 @@ public final class ConfigCardUpgradeHelper {
             }
         }
         // Handle Factory -> IUpgradeableTile machine upgrade
-        if (hasFactoryData(data) && !(tile instanceof TileEntityFactory) && tile instanceof IUpgradeableTile && !MoreMachineCompat.isTierMachine(tile)) {
+        if (hasFactoryData(data) && !(tile instanceof TileEntityFactory)
+              && (tile instanceof IUpgradeableTile || MoreMachineCompat.isUpgradeable(tile))
+              && !MoreMachineCompat.isTierMachine(tile)) {
             int storedTierOrdinal = getStoredFactoryTier(data);
             String failure = validateAndConsumeTierInstallersForUpgradeableMachine(player, tile, storedTierOrdinal, stack);
             if (failure != null) {
                 return failure;
             }
-            performUpgradeableMachineUpgrade(player, tile, storedTierOrdinal);
+            // A normal machine may need to become either a MoreMachine tier
+            // block or a normal Mekanism factory. The upgrade helper selects
+            // the correct adapter from the target block state.
+            performUpgradeableMachineUpgrade(player, tile, storedTierOrdinal, true);
+            TileEntity updatedTile = tile.getWorld() == null ? null : tile.getWorld().getTileEntity(tile.getPos());
+            if (updatedTile == null
+                  || (!(updatedTile instanceof TileEntityFactory) && !MoreMachineCompat.isTierMachine(updatedTile))) {
+                return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.cannot_upgrade");
+            }
+            int updatedTierOrdinal = updatedTile instanceof TileEntityFactory
+                  ? ((TileEntityFactory) updatedTile).tier.ordinal()
+                  : MoreMachineCompat.getTierOrdinal(updatedTile);
+            if (updatedTierOrdinal < storedTierOrdinal) {
+                return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.cannot_upgrade");
+            }
+            tile = updatedTile;
+            configCardAccess = CapabilityUtils.getCapability(tile, Capabilities.SPECIAL_CONFIG_DATA_CAPABILITY, side);
+            if (tile instanceof IUpgradeTile) {
+                IUpgradeTile ut = (IUpgradeTile) tile;
+                upgradeTile = ut.supportsUpgrades() ? ut : null;
+            } else {
+                upgradeTile = null;
+            }
         }
         // Handle MoreMachine -> IUpgradeableTile machine upgrade
         if (MoreMachineCompat.isMoreMachineLoaded() && MoreMachineCompat.hasTierData(data) && !(tile instanceof TileEntityFactory) && MoreMachineCompat.isUpgradeable(tile) && !MoreMachineCompat.isTierMachine(tile)) {

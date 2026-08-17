@@ -145,9 +145,24 @@ public class MoreMachineCompat {
         if (storedFamily == null || !storedFamily.equals(targetFamily)) {
             return false;
         }
-        IUpgradeData upgradeData = getUpgradeData(targetTile, BaseTier.BASIC);
-        IBlockState upgradeResult = getUpgradeResult(targetTile, BaseTier.BASIC);
-        return upgradeData != null && upgradeResult != null;
+        return canConvertToMoreMachine(targetTile);
+    }
+
+    /**
+     * Returns whether this normal machine has a real MoreMachine first-tier
+     * conversion. This is separate from the stored-card type check because a
+     * factory card intentionally stores TileEntityFactory rather than the
+     * machine class that is being converted.
+     */
+    public static boolean canConvertToMoreMachine(TileEntity targetTile) {
+        if (!isMoreMachineLoaded() || targetTile == null || isTierMachine(targetTile)) {
+            return false;
+        }
+        if (!isNormalChemicalInfuser(targetTile) && findTileUpgradeAdapter(targetTile) == null) {
+            return false;
+        }
+        return getUpgradeData(targetTile, BaseTier.BASIC) != null
+              && getUpgradeResult(targetTile, BaseTier.BASIC) != null;
     }
 
     public static IUpgradeData getUpgradeData(TileEntity tile, BaseTier tier) {
@@ -185,21 +200,30 @@ public class MoreMachineCompat {
      * mod to MoreMachine at class-load time.
      */
     public static boolean replaceTileForUpgrade(TileEntity sourceTile, IBlockState targetState, IUpgradeData upgradeData) {
-        if (!moreMachineLoaded || sourceTile == null || targetState == null || upgradeData == null) {
+        if (sourceTile == null || targetState == null || upgradeData == null) {
             return false;
         }
-        try {
-            Class<?> helper = Class.forName("mekceumoremachine.common.util.MEKCeuMoreMachineUpgradeUtils");
-            Method replace = helper.getMethod("replaceTileForUpgrade", TileEntity.class, IBlockState.class, IUpgradeData.class);
-            return Boolean.TRUE.equals(replace.invoke(null, sourceTile, targetState, upgradeData));
-        } catch (Exception e) {
+        if (isMoreMachineLoaded() && isMoreMachineBlockState(targetState)) {
             try {
-                return mekanism.common.util.UpgradeUtils.replaceTileForUpgrade(sourceTile, targetState, upgradeData);
-            } catch (Exception fallbackException) {
-                MekConfigCardUpgradesMod.LOGGER.error("Error replacing tile for MoreMachine upgrade", fallbackException);
-                return false;
+                Class<?> helper = Class.forName("mekceumoremachine.common.util.MEKCeuMoreMachineUpgradeUtils");
+                Method replace = helper.getMethod("replaceTileForUpgrade", TileEntity.class, IBlockState.class, IUpgradeData.class);
+                if (Boolean.TRUE.equals(replace.invoke(null, sourceTile, targetState, upgradeData))) {
+                    return true;
+                }
+            } catch (Exception ignored) {
             }
         }
+        try {
+            return mekanism.common.util.UpgradeUtils.replaceTileForUpgrade(sourceTile, targetState, upgradeData);
+        } catch (Exception fallbackException) {
+            MekConfigCardUpgradesMod.LOGGER.error("Error replacing tile for upgrade", fallbackException);
+            return false;
+        }
+    }
+
+    private static boolean isMoreMachineBlockState(IBlockState state) {
+        ResourceLocation registryName = state.getBlock().getRegistryName();
+        return registryName != null && MOD_ID.equals(registryName.getResourceDomain());
     }
 
     private static boolean isNormalChemicalInfuser(TileEntity tile) {
