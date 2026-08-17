@@ -330,6 +330,7 @@ public final class ConfigCardUpgradeHelper {
             }
         }
         TileEntityFactory upgradedFactory = null;
+        boolean convertedToMoreMachine = false;
         if (hasFactoryData(data) && tile instanceof TileEntityFactory) {
             TileEntityFactory targetFactory = (TileEntityFactory) tile;
             int storedTierOrdinal = getStoredFactoryTier(data);
@@ -353,6 +354,30 @@ public final class ConfigCardUpgradeHelper {
                         }
                     }
                 }
+            }
+        }
+        // A card copied from a normal Mekanism machine does not contain a
+        // MoreMachine tier field. If the target is the matching normal
+        // machine, use the registered BASIC adapter to convert it first.
+        if (MoreMachineCompat.canConvertToMoreMachine(storedType, tile)
+              && !hasFactoryData(data) && !MoreMachineCompat.hasTierData(data)) {
+            String failure = validateAndConsumeTierInstallersForUpgradeableMachine(player, tile, BaseTier.BASIC.ordinal(), stack);
+            if (failure != null) {
+                return failure;
+            }
+            performUpgradeableMachineUpgrade(player, tile, BaseTier.BASIC.ordinal());
+            TileEntity updatedTile = tile.getWorld() == null ? null : tile.getWorld().getTileEntity(tile.getPos());
+            if (updatedTile == null || !MoreMachineCompat.isTierMachine(updatedTile)) {
+                return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.cannot_upgrade");
+            }
+            tile = updatedTile;
+            convertedToMoreMachine = true;
+            configCardAccess = CapabilityUtils.getCapability(tile, Capabilities.SPECIAL_CONFIG_DATA_CAPABILITY, side);
+            if (tile instanceof IUpgradeTile) {
+                IUpgradeTile ut = (IUpgradeTile) tile;
+                upgradeTile = ut.supportsUpgrades() ? ut : null;
+            } else {
+                upgradeTile = null;
             }
         }
         // Handle Factory -> IUpgradeableTile machine upgrade
@@ -608,7 +633,7 @@ public final class ConfigCardUpgradeHelper {
                 }
                 boolean success;
                 if (upgradeResult != null) {
-                    success = UpgradeUtils.replaceTileForUpgrade(tile, upgradeResult, upgradeData);
+                    success = MoreMachineCompat.replaceTileForUpgrade(tile, upgradeResult, upgradeData);
                 } else if (tile instanceof IUpgradeableTile) {
                     success = ((IUpgradeableTile) tile).parseUpgradeData(upgradeData);
                 } else {

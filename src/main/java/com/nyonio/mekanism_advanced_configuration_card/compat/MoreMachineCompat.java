@@ -105,6 +105,24 @@ public class MoreMachineCompat {
         return tile instanceof IUpgradeableTile || findTileUpgradeAdapter(tile) != null;
     }
 
+    /**
+     * A card copied from a normal Mekanism machine has no MoreMachine tier
+     * field. When the target is still the normal machine implementation, the
+     * first BASIC tier conversion must nevertheless be inferred from the
+     * registered MoreMachine adapter.
+     */
+    public static boolean canConvertToMoreMachine(Class<? extends TileEntity> storedType, TileEntity targetTile) {
+        if (!moreMachineLoaded || storedType == null || targetTile == null || isTierMachine(targetTile)) {
+            return false;
+        }
+        String storedFamily = getMachineFamily(storedType);
+        String targetFamily = getMachineFamily(targetTile.getClass());
+        if (storedFamily == null || !storedFamily.equals(targetFamily)) {
+            return false;
+        }
+        return getUpgradeData(targetTile, BaseTier.BASIC) != null && getUpgradeResult(targetTile, BaseTier.BASIC) != null;
+    }
+
     public static IUpgradeData getUpgradeData(TileEntity tile, BaseTier tier) {
         Object adapter = findTileUpgradeAdapter(tile);
         Object data = invokeAdapter(adapter, "getUpgradeData", tier);
@@ -127,6 +145,24 @@ public class MoreMachineCompat {
             return ((IUpgradeableTile) tile).getUpgradeResult(tier);
         }
         return null;
+    }
+
+    /**
+     * Calls MoreMachine's optional replacement helper without linking this
+     * mod to MoreMachine at class-load time.
+     */
+    public static boolean replaceTileForUpgrade(TileEntity sourceTile, IBlockState targetState, IUpgradeData upgradeData) {
+        if (!moreMachineLoaded || sourceTile == null || targetState == null || upgradeData == null) {
+            return false;
+        }
+        try {
+            Class<?> helper = Class.forName("mekceumoremachine.common.util.MEKCeuMoreMachineUpgradeUtils");
+            Method replace = helper.getMethod("replaceTileForUpgrade", TileEntity.class, IBlockState.class, IUpgradeData.class);
+            return Boolean.TRUE.equals(replace.invoke(null, sourceTile, targetState, upgradeData));
+        } catch (Exception e) {
+            MekConfigCardUpgradesMod.LOGGER.error("Error replacing tile for MoreMachine upgrade", e);
+            return false;
+        }
     }
 
     private static Object findTileUpgradeAdapter(TileEntity tile) {
