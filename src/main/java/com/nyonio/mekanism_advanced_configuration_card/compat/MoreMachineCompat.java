@@ -13,6 +13,7 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Locale;
 
@@ -40,11 +41,17 @@ public class MoreMachineCompat {
     }
     
     public static boolean isMoreMachineLoaded() {
+        // The mod list can still be settling when this compatibility class is
+        // first touched. Refresh the state so an early false result does not
+        // permanently disable the conversion path.
+        if (!moreMachineLoaded && Loader.isModLoaded(MOD_ID)) {
+            init();
+        }
         return moreMachineLoaded;
     }
     
     public static boolean isTierMachine(TileEntity tile) {
-        if (!moreMachineLoaded || tile == null) {
+        if (!isMoreMachineLoaded() || tile == null) {
             return false;
         }
         if (tile instanceof TileEntityFactory) {
@@ -81,23 +88,39 @@ public class MoreMachineCompat {
     }
 
     private static String getMachineFamily(Class<?> tileClass) {
+        if (tileClass == null) {
+            return null;
+        }
         String name = tileClass.getSimpleName();
+        int nestedClassSeparator = name.indexOf('$');
+        if (nestedClassSeparator >= 0) {
+            name = name.substring(0, nestedClassSeparator);
+        }
         if (name.startsWith("TileEntity")) {
             name = name.substring("TileEntity".length());
+        }
+        name = name.replaceAll("[^A-Za-z0-9]", "");
+        if (name.toLowerCase(Locale.ROOT).endsWith("factory")) {
+            return null;
         }
         boolean changed;
         do {
             changed = false;
-            String[] tierPrefixes = {"Basic", "Advanced", "Elite", "Ultimate", "Tier"};
-            for (String prefix : tierPrefixes) {
-                if (name.startsWith(prefix)) {
-                    name = name.substring(prefix.length());
+            String[] tierMarkers = {"Basic", "Advanced", "Elite", "Ultimate", "Tier", "First", "Second", "Third", "Fourth"};
+            for (String marker : tierMarkers) {
+                if (name.startsWith(marker)) {
+                    name = name.substring(marker.length());
+                    changed = true;
+                    break;
+                }
+                if (name.endsWith(marker) && name.length() > marker.length()) {
+                    name = name.substring(0, name.length() - marker.length());
                     changed = true;
                     break;
                 }
             }
         } while (changed && !name.isEmpty());
-        if (name.isEmpty() || name.endsWith("Factory")) {
+        if (name.isEmpty() || name.toLowerCase(Locale.ROOT).endsWith("factory")) {
             return null;
         }
         return name.toLowerCase(Locale.ROOT);
@@ -114,7 +137,7 @@ public class MoreMachineCompat {
      * registered MoreMachine adapter.
      */
     public static boolean canConvertToMoreMachine(Class<? extends TileEntity> storedType, TileEntity targetTile) {
-        if (!moreMachineLoaded || storedType == null || targetTile == null || isTierMachine(targetTile)) {
+        if (!isMoreMachineLoaded() || storedType == null || targetTile == null || isTierMachine(targetTile)) {
             return false;
         }
         String storedFamily = getMachineFamily(storedType);
@@ -122,7 +145,9 @@ public class MoreMachineCompat {
         if (storedFamily == null || !storedFamily.equals(targetFamily)) {
             return false;
         }
-        return getUpgradeData(targetTile, BaseTier.BASIC) != null && getUpgradeResult(targetTile, BaseTier.BASIC) != null;
+        IUpgradeData upgradeData = getUpgradeData(targetTile, BaseTier.BASIC);
+        IBlockState upgradeResult = getUpgradeResult(targetTile, BaseTier.BASIC);
+        return upgradeData != null && upgradeResult != null;
     }
 
     public static IUpgradeData getUpgradeData(TileEntity tile, BaseTier tier) {
@@ -178,7 +203,9 @@ public class MoreMachineCompat {
     }
 
     private static boolean isNormalChemicalInfuser(TileEntity tile) {
-        return tile != null && "mekanism.common.tile.machine.TileEntityChemicalInfuser".equals(tile.getClass().getName());
+        return tile != null
+              && tile.getClass().getName().startsWith("mekanism.")
+              && "chemicalinfuser".equals(getMachineFamily(tile.getClass()));
     }
 
     private static IUpgradeData createFirstChemicalInfuserUpgradeData(TileEntity tile, BaseTier tier) {
@@ -198,11 +225,15 @@ public class MoreMachineCompat {
                   getPublicField(tile, "rightTank"),
                   getPublicField(tile, "centerTank")
             };
-            for (java.lang.reflect.Constructor<?> constructor : dataClass.getConstructors()) {
+            for (java.lang.reflect.Constructor<?> constructor : dataClass.getDeclaredConstructors()) {
                 if (constructor.getParameterTypes().length == arguments.length) {
-                    Object data = constructor.newInstance(arguments);
-                    if (data instanceof IUpgradeData) {
-                        return (IUpgradeData) data;
+                    try {
+                        constructor.setAccessible(true);
+                        Object data = constructor.newInstance(arguments);
+                        if (data instanceof IUpgradeData) {
+                            return (IUpgradeData) data;
+                        }
+                    } catch (Exception ignored) {
                     }
                 }
             }
@@ -218,8 +249,12 @@ public class MoreMachineCompat {
         }
         try {
             Class<?> blocksClass = Class.forName("mekceumoremachine.common.registries.MEKCeuMoreMachineBlocks");
-            Object block = blocksClass.getField("TierChemicalInfuser").get(null);
-            return (IBlockState) net.minecraft.block.Block.class.getMethod("getDefaultState").invoke(block);
+            Object block = getStaticFieldValue(blocksClass, "TierChemicalInfuser");
+            if (block instanceof net.minecraft.block.Block) {
+                return ((net.minecraft.block.Block) block).getDefaultState();
+            }
+            Method getDefaultState = block.getClass().getMethod("getDefaultState");
+            return (IBlockState) getDefaultState.invoke(block);
         } catch (Exception e) {
             MekConfigCardUpgradesMod.LOGGER.warn("Unable to find MoreMachine chemical infuser block", e);
             return null;
@@ -227,25 +262,59 @@ public class MoreMachineCompat {
     }
 
     private static Object getPublicField(Object object, String fieldName) throws ReflectiveOperationException {
-        return object.getClass().getField(fieldName).get(object);
+        Field field = findField(object.getClass(), fieldName);
+        if (field == null) {
+            throw new NoSuchFieldException(fieldName);
+        }
+        field.setAccessible(true);
+        return field.get(object);
+    }
+
+    private static Object getStaticFieldValue(Class<?> type, String fieldName) throws ReflectiveOperationException {
+        Field field = findField(type, fieldName);
+        if (field == null) {
+            throw new NoSuchFieldException(fieldName);
+        }
+        field.setAccessible(true);
+        return field.get(null);
+    }
+
+    private static Field findField(Class<?> type, String fieldName) {
+        Class<?> current = type;
+        while (current != null) {
+            try {
+                return current.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException e) {
+                current = current.getSuperclass();
+            }
+        }
+        return null;
     }
 
     private static Object findTileUpgradeAdapter(TileEntity tile) {
-        if (!moreMachineLoaded || tile == null) {
+        if (!isMoreMachineLoaded() || tile == null) {
             return null;
         }
         try {
             Class<?> registry = Class.forName("mekanism.common.upgrade.TileUpgradeRegistry");
-            Method find = registry.getMethod("find", TileEntity.class);
             if (!adapterRegistrationAttempted) {
                 adapterRegistrationAttempted = true;
                 try {
                     Class<?> adapters = Class.forName("mekceumoremachine.common.upgrade.MoreMachineTileUpgradeAdapters");
-                    adapters.getMethod("register").invoke(null);
+                    Method register = adapters.getDeclaredMethod("register");
+                    register.setAccessible(true);
+                    register.invoke(null);
                 } catch (Exception e) {
                     MekConfigCardUpgradesMod.LOGGER.warn("Unable to register MoreMachine tile upgrade adapters", e);
                 }
             }
+            Method find;
+            try {
+                find = registry.getMethod("find", TileEntity.class);
+            } catch (NoSuchMethodException e) {
+                find = registry.getDeclaredMethod("find", TileEntity.class);
+            }
+            find.setAccessible(true);
             return find.invoke(null, tile);
         } catch (Exception e) {
             return null;
@@ -271,7 +340,7 @@ public class MoreMachineCompat {
     }
     
     public static int getTierOrdinal(TileEntity tile) {
-        if (!moreMachineLoaded || !isTierMachine(tile)) {
+        if (!isMoreMachineLoaded() || !isTierMachine(tile)) {
             return -1;
         }
         try {
@@ -312,7 +381,7 @@ public class MoreMachineCompat {
     }
     
     public static NBTTagCompound saveTierData(TileEntity tile, NBTTagCompound data) {
-        if (!moreMachineLoaded || !isTierMachine(tile)) {
+        if (!isMoreMachineLoaded() || !isTierMachine(tile)) {
             return data;
         }
         int tierOrdinal = getTierOrdinal(tile);
@@ -331,7 +400,7 @@ public class MoreMachineCompat {
     }
     
     public static Item getCompositeTierInstallerItem() {
-        if (!moreMachineLoaded) {
+        if (!isMoreMachineLoaded()) {
             return null;
         }
         return ForgeRegistries.ITEMS.getValue(new ResourceLocation(MOD_ID, "compositetierinstaller"));
@@ -342,7 +411,7 @@ public class MoreMachineCompat {
     }
     
     public static boolean upgradeToTier(TileEntity tile, int targetTierOrdinal) {
-        if (!moreMachineLoaded || !isTierMachine(tile)) {
+        if (!isMoreMachineLoaded() || !isTierMachine(tile)) {
             return false;
         }
         try {

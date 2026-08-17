@@ -366,7 +366,7 @@ public final class ConfigCardUpgradeHelper {
             if (failure != null) {
                 return failure;
             }
-            performUpgradeableMachineUpgrade(player, tile, BaseTier.BASIC.ordinal());
+            performUpgradeableMachineUpgrade(player, tile, BaseTier.BASIC.ordinal(), true);
             TileEntity updatedTile = tile.getWorld() == null ? null : tile.getWorld().getTileEntity(tile.getPos());
             if (updatedTile == null || !MoreMachineCompat.isTierMachine(updatedTile)) {
                 return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.cannot_upgrade");
@@ -397,7 +397,7 @@ public final class ConfigCardUpgradeHelper {
             if (failure != null) {
                 return failure;
             }
-            performUpgradeableMachineUpgrade(player, tile, storedTierOrdinal);
+            performUpgradeableMachineUpgrade(player, tile, storedTierOrdinal, true);
             TileEntity updatedTile = tile.getWorld() == null ? null : tile.getWorld().getTileEntity(tile.getPos());
             if (updatedTile != null) {
                 tile = updatedTile;
@@ -618,7 +618,19 @@ public final class ConfigCardUpgradeHelper {
     }
     
     private static void performUpgradeableMachineUpgrade(EntityPlayer player, TileEntity tile, int targetTierOrdinal) {
-        if (!(tile instanceof IUpgradeableTile) && MoreMachineCompat.isUpgradeable(tile)) {
+        performUpgradeableMachineUpgrade(player, tile, targetTierOrdinal, false);
+    }
+
+    /**
+     * Performs an upgrade through MoreMachine's adapter when a normal
+     * Mekanism machine is being converted to a tiered MoreMachine block.
+     * Normal Mekanism machines also implement IUpgradeableTile, so checking
+     * only for that interface used to return before the adapter was invoked.
+     */
+    private static void performUpgradeableMachineUpgrade(EntityPlayer player, TileEntity tile, int targetTierOrdinal, boolean forceMoreMachine) {
+        if ((forceMoreMachine || !(tile instanceof IUpgradeableTile))
+              && !(tile instanceof TileEntityFactory)
+              && MoreMachineCompat.isUpgradeable(tile)) {
             World world = tile.getWorld();
             BlockPos pos = tile.getPos();
             if (world == null || pos == null) {
@@ -651,7 +663,11 @@ public final class ConfigCardUpgradeHelper {
                 if (updatedTile instanceof TileEntityFactory) {
                     currentTierOrdinal = ((TileEntityFactory) updatedTile).tier.ordinal();
                 } else if (MoreMachineCompat.isMoreMachineLoaded() && MoreMachineCompat.isTierMachine(updatedTile)) {
-                    currentTierOrdinal = MoreMachineCompat.getTierOrdinal(updatedTile);
+                    int updatedTierOrdinal = MoreMachineCompat.getTierOrdinal(updatedTile);
+                    if (updatedTierOrdinal <= currentTierOrdinal) {
+                        break;
+                    }
+                    currentTierOrdinal = updatedTierOrdinal;
                 } else {
                     break;
                 }
