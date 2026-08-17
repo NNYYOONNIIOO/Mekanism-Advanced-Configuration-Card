@@ -337,7 +337,6 @@ public final class ConfigCardUpgradeHelper {
         }
         TileEntityFactory upgradedFactory = null;
         boolean convertedToMoreMachine = false;
-        boolean convertedFactoryToMoreMachine = false;
         if (hasFactoryData(data) && tile instanceof TileEntityFactory) {
             TileEntityFactory targetFactory = (TileEntityFactory) tile;
             int storedTierOrdinal = getStoredFactoryTier(data);
@@ -415,9 +414,6 @@ public final class ConfigCardUpgradeHelper {
             if (!convertsToMoreMachine && updatedTierOrdinal < requestedTierOrdinal) {
                 return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.cannot_upgrade");
             }
-            if (convertsToMoreMachine) {
-                convertedFactoryToMoreMachine = true;
-            }
             tile = updatedTile;
             configCardAccess = CapabilityUtils.getCapability(tile, Capabilities.SPECIAL_CONFIG_DATA_CAPABILITY, side);
             if (tile instanceof IUpgradeTile) {
@@ -461,8 +457,7 @@ public final class ConfigCardUpgradeHelper {
         }
         // Handle Factory -> MoreMachine tier conversion
         if (MoreMachineCompat.isMoreMachineLoaded() && hasFactoryData(data)
-              && !(tile instanceof TileEntityFactory) && MoreMachineCompat.isTierMachine(tile)
-              && !convertedFactoryToMoreMachine) {
+              && !(tile instanceof TileEntityFactory) && MoreMachineCompat.isTierMachine(tile)) {
             int storedTierOrdinal = getStoredFactoryTier(data);
             int currentTierOrdinal = MoreMachineCompat.getTierOrdinal(tile);
             if (currentTierOrdinal >= 0 && storedTierOrdinal > currentTierOrdinal) {
@@ -471,6 +466,19 @@ public final class ConfigCardUpgradeHelper {
                     return failure;
                 }
                 performMoreMachineTierUpgrade(player, tile, storedTierOrdinal);
+                TileEntity updatedMoreMachineTile = tile.getWorld() == null ? null : tile.getWorld().getTileEntity(tile.getPos());
+                if (updatedMoreMachineTile == null
+                      || MoreMachineCompat.getTierOrdinal(updatedMoreMachineTile) < storedTierOrdinal) {
+                    return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.cannot_upgrade");
+                }
+                tile = updatedMoreMachineTile;
+                configCardAccess = CapabilityUtils.getCapability(tile, Capabilities.SPECIAL_CONFIG_DATA_CAPABILITY, side);
+                if (tile instanceof IUpgradeTile) {
+                    IUpgradeTile ut = (IUpgradeTile) tile;
+                    upgradeTile = ut.supportsUpgrades() ? ut : null;
+                } else {
+                    upgradeTile = null;
+                }
             }
         }
         // Handle MoreMachine -> Factory tier conversion
