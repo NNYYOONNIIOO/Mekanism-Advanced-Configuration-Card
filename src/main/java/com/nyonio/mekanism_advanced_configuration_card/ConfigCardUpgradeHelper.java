@@ -484,6 +484,9 @@ public final class ConfigCardUpgradeHelper {
         if (!(tile instanceof IUpgradeableTile)) {
             return null;
         }
+        if (!(tile instanceof TileEntityFactory) && !MoreMachineCompat.isTierMachine(tile)) {
+            return null;
+        }
         
         Object ae2Storage = null;
         Object ae2Source = null;
@@ -585,6 +588,9 @@ public final class ConfigCardUpgradeHelper {
             return;
         }
         IUpgradeableTile upgradeable = (IUpgradeableTile) tile;
+        if (!(tile instanceof TileEntityFactory) && !MoreMachineCompat.isTierMachine(tile)) {
+            return;
+        }
         
         World world = tile.getWorld();
         BlockPos pos = tile.getPos();
@@ -906,6 +912,10 @@ public final class ConfigCardUpgradeHelper {
         
         boolean sourceIsFactory = TileEntityFactory.class.isAssignableFrom(storedType);
         boolean targetIsFactory = tile instanceof TileEntityFactory;
+
+        if (MoreMachineCompat.isEquivalentMachineType(storedType, tile)) {
+            return true;
+        }
         
         if (sourceIsFactory && targetIsFactory && hasFactoryData(data)) {
             return true;

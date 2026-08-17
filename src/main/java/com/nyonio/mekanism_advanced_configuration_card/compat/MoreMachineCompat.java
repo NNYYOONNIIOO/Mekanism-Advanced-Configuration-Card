@@ -11,6 +11,7 @@ import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
 import java.lang.reflect.Method;
+import java.util.Locale;
 
 public class MoreMachineCompat {
     public static final String MOD_ID = "mekceumoremachine";
@@ -53,6 +54,48 @@ public class MoreMachineCompat {
         }
         String className = tile.getClass().getName();
         return className.startsWith("mekceumoremachine.");
+    }
+
+    /**
+     * MoreMachine uses a different TileEntity class for the tiered version of
+     * a Mekanism machine. Configuration cards should still be transferable
+     * between those two implementations when they represent the same machine.
+     */
+    public static boolean isEquivalentMachineType(Class<? extends TileEntity> storedType, TileEntity targetTile) {
+        if (storedType == null || targetTile == null) {
+            return false;
+        }
+        boolean storedIsMoreMachine = storedType.getName().startsWith("mekceumoremachine.");
+        boolean targetIsMoreMachine = targetTile.getClass().getName().startsWith("mekceumoremachine.");
+        if (storedIsMoreMachine == targetIsMoreMachine) {
+            return false;
+        }
+        String storedFamily = getMachineFamily(storedType);
+        String targetFamily = getMachineFamily(targetTile.getClass());
+        return storedFamily != null && storedFamily.equals(targetFamily);
+    }
+
+    private static String getMachineFamily(Class<?> tileClass) {
+        String name = tileClass.getSimpleName();
+        if (name.startsWith("TileEntity")) {
+            name = name.substring("TileEntity".length());
+        }
+        boolean changed;
+        do {
+            changed = false;
+            String[] tierPrefixes = {"Basic", "Advanced", "Elite", "Ultimate", "Tier"};
+            for (String prefix : tierPrefixes) {
+                if (name.startsWith(prefix)) {
+                    name = name.substring(prefix.length());
+                    changed = true;
+                    break;
+                }
+            }
+        } while (changed && !name.isEmpty());
+        if (name.isEmpty() || name.endsWith("Factory")) {
+            return null;
+        }
+        return name.toLowerCase(Locale.ROOT);
     }
     
     public static int getTierOrdinal(TileEntity tile) {
