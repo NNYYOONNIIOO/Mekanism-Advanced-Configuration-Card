@@ -1,8 +1,11 @@
 package com.nyonio.mekanism_advanced_configuration_card.compat;
 
 import com.nyonio.mekanism_advanced_configuration_card.MekConfigCardUpgradesMod;
+import mekanism.common.base.IUpgradeableTile;
 import mekanism.common.tier.BaseTier;
 import mekanism.common.tile.factory.TileEntityFactory;
+import mekanism.common.upgrade.IUpgradeData;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.item.Item;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
@@ -96,6 +99,59 @@ public class MoreMachineCompat {
             return null;
         }
         return name.toLowerCase(Locale.ROOT);
+    }
+
+    public static boolean isUpgradeable(TileEntity tile) {
+        return tile instanceof IUpgradeableTile || findTileUpgradeAdapter(tile) != null;
+    }
+
+    public static IUpgradeData getUpgradeData(TileEntity tile, BaseTier tier) {
+        Object adapter = findTileUpgradeAdapter(tile);
+        Object data = invokeAdapter(adapter, "getUpgradeData", tier);
+        if (data instanceof IUpgradeData) {
+            return (IUpgradeData) data;
+        }
+        if (tile instanceof IUpgradeableTile) {
+            return ((IUpgradeableTile) tile).getUpgradeData(tier);
+        }
+        return null;
+    }
+
+    public static IBlockState getUpgradeResult(TileEntity tile, BaseTier tier) {
+        Object adapter = findTileUpgradeAdapter(tile);
+        Object result = invokeAdapter(adapter, "getUpgradeResult", tier);
+        if (result instanceof IBlockState) {
+            return (IBlockState) result;
+        }
+        if (tile instanceof IUpgradeableTile) {
+            return ((IUpgradeableTile) tile).getUpgradeResult(tier);
+        }
+        return null;
+    }
+
+    private static Object findTileUpgradeAdapter(TileEntity tile) {
+        if (!moreMachineLoaded || tile == null) {
+            return null;
+        }
+        try {
+            Class<?> registry = Class.forName("mekanism.common.upgrade.TileUpgradeRegistry");
+            Method find = registry.getMethod("find", TileEntity.class);
+            return find.invoke(null, tile);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static Object invokeAdapter(Object adapter, String methodName, BaseTier tier) {
+        if (adapter == null) {
+            return null;
+        }
+        try {
+            Method method = adapter.getClass().getMethod(methodName, BaseTier.class);
+            return method.invoke(adapter, tier);
+        } catch (Exception e) {
+            return null;
+        }
     }
     
     public static int getTierOrdinal(TileEntity tile) {

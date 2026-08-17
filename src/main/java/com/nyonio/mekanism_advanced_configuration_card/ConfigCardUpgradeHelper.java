@@ -365,13 +365,24 @@ public final class ConfigCardUpgradeHelper {
             performUpgradeableMachineUpgrade(player, tile, storedTierOrdinal);
         }
         // Handle MoreMachine -> IUpgradeableTile machine upgrade
-        if (MoreMachineCompat.isMoreMachineLoaded() && MoreMachineCompat.hasTierData(data) && !(tile instanceof TileEntityFactory) && tile instanceof IUpgradeableTile && !MoreMachineCompat.isTierMachine(tile)) {
+        if (MoreMachineCompat.isMoreMachineLoaded() && MoreMachineCompat.hasTierData(data) && !(tile instanceof TileEntityFactory) && MoreMachineCompat.isUpgradeable(tile) && !MoreMachineCompat.isTierMachine(tile)) {
             int storedTierOrdinal = MoreMachineCompat.getStoredTier(data);
             String failure = validateAndConsumeTierInstallersForUpgradeableMachine(player, tile, storedTierOrdinal, stack);
             if (failure != null) {
                 return failure;
             }
             performUpgradeableMachineUpgrade(player, tile, storedTierOrdinal);
+            TileEntity updatedTile = tile.getWorld() == null ? null : tile.getWorld().getTileEntity(tile.getPos());
+            if (updatedTile != null) {
+                tile = updatedTile;
+                configCardAccess = CapabilityUtils.getCapability(tile, Capabilities.SPECIAL_CONFIG_DATA_CAPABILITY, side);
+                if (tile instanceof IUpgradeTile) {
+                    IUpgradeTile ut = (IUpgradeTile) tile;
+                    upgradeTile = ut.supportsUpgrades() ? ut : null;
+                } else {
+                    upgradeTile = null;
+                }
+            }
         }
         // Handle MoreMachine tier upgrade
         if (MoreMachineCompat.isMoreMachineLoaded() && MoreMachineCompat.hasTierData(data) && MoreMachineCompat.isTierMachine(tile)) {
@@ -481,10 +492,7 @@ public final class ConfigCardUpgradeHelper {
         if (InfiniteUpgradeCardCompat.hasInfiniteFactoryInstaller(player, configCard)) {
             return null;
         }
-        if (!(tile instanceof IUpgradeableTile)) {
-            return null;
-        }
-        if (!(tile instanceof TileEntityFactory) && !MoreMachineCompat.isTierMachine(tile)) {
+        if (!MoreMachineCompat.isUpgradeable(tile)) {
             return null;
         }
         
@@ -584,6 +592,46 @@ public final class ConfigCardUpgradeHelper {
     }
     
     private static void performUpgradeableMachineUpgrade(EntityPlayer player, TileEntity tile, int targetTierOrdinal) {
+        if (!(tile instanceof IUpgradeableTile) && MoreMachineCompat.isUpgradeable(tile)) {
+            World world = tile.getWorld();
+            BlockPos pos = tile.getPos();
+            if (world == null || pos == null) {
+                return;
+            }
+            int currentTierOrdinal = -1;
+            while (currentTierOrdinal < targetTierOrdinal && currentTierOrdinal < BaseTier.ULTIMATE.ordinal()) {
+                BaseTier nextTier = BaseTier.values()[currentTierOrdinal + 1];
+                mekanism.common.upgrade.IUpgradeData upgradeData = MoreMachineCompat.getUpgradeData(tile, nextTier);
+                IBlockState upgradeResult = MoreMachineCompat.getUpgradeResult(tile, nextTier);
+                if (upgradeData == null) {
+                    break;
+                }
+                boolean success;
+                if (upgradeResult != null) {
+                    success = UpgradeUtils.replaceTileForUpgrade(tile, upgradeResult, upgradeData);
+                } else if (tile instanceof IUpgradeableTile) {
+                    success = ((IUpgradeableTile) tile).parseUpgradeData(upgradeData);
+                } else {
+                    break;
+                }
+                if (!success) {
+                    break;
+                }
+                TileEntity updatedTile = world.getTileEntity(pos);
+                if (updatedTile == null) {
+                    break;
+                }
+                tile = updatedTile;
+                if (updatedTile instanceof TileEntityFactory) {
+                    currentTierOrdinal = ((TileEntityFactory) updatedTile).tier.ordinal();
+                } else if (MoreMachineCompat.isMoreMachineLoaded() && MoreMachineCompat.isTierMachine(updatedTile)) {
+                    currentTierOrdinal = MoreMachineCompat.getTierOrdinal(updatedTile);
+                } else {
+                    break;
+                }
+            }
+            return;
+        }
         if (!(tile instanceof IUpgradeableTile)) {
             return;
         }
