@@ -104,7 +104,7 @@ public class MoreMachineCompat {
     }
 
     public static boolean isUpgradeable(TileEntity tile) {
-        return tile instanceof IUpgradeableTile || findTileUpgradeAdapter(tile) != null;
+        return tile instanceof IUpgradeableTile || findTileUpgradeAdapter(tile) != null || isNormalChemicalInfuser(tile);
     }
 
     /**
@@ -132,9 +132,12 @@ public class MoreMachineCompat {
             return (IUpgradeData) data;
         }
         if (tile instanceof IUpgradeableTile) {
-            return ((IUpgradeableTile) tile).getUpgradeData(tier);
+            IUpgradeData upgradeData = ((IUpgradeableTile) tile).getUpgradeData(tier);
+            if (upgradeData != null) {
+                return upgradeData;
+            }
         }
-        return null;
+        return createFirstChemicalInfuserUpgradeData(tile, tier);
     }
 
     public static IBlockState getUpgradeResult(TileEntity tile, BaseTier tier) {
@@ -144,9 +147,12 @@ public class MoreMachineCompat {
             return (IBlockState) result;
         }
         if (tile instanceof IUpgradeableTile) {
-            return ((IUpgradeableTile) tile).getUpgradeResult(tier);
+            IBlockState upgradeResult = ((IUpgradeableTile) tile).getUpgradeResult(tier);
+            if (upgradeResult != null) {
+                return upgradeResult;
+            }
         }
-        return null;
+        return getFirstChemicalInfuserUpgradeResult(tile, tier);
     }
 
     /**
@@ -162,9 +168,66 @@ public class MoreMachineCompat {
             Method replace = helper.getMethod("replaceTileForUpgrade", TileEntity.class, IBlockState.class, IUpgradeData.class);
             return Boolean.TRUE.equals(replace.invoke(null, sourceTile, targetState, upgradeData));
         } catch (Exception e) {
-            MekConfigCardUpgradesMod.LOGGER.error("Error replacing tile for MoreMachine upgrade", e);
-            return false;
+            try {
+                return mekanism.common.util.UpgradeUtils.replaceTileForUpgrade(sourceTile, targetState, upgradeData);
+            } catch (Exception fallbackException) {
+                MekConfigCardUpgradesMod.LOGGER.error("Error replacing tile for MoreMachine upgrade", fallbackException);
+                return false;
+            }
         }
+    }
+
+    private static boolean isNormalChemicalInfuser(TileEntity tile) {
+        return tile != null && "mekanism.common.tile.machine.TileEntityChemicalInfuser".equals(tile.getClass().getName());
+    }
+
+    private static IUpgradeData createFirstChemicalInfuserUpgradeData(TileEntity tile, BaseTier tier) {
+        if (!isNormalChemicalInfuser(tile) || tier != BaseTier.BASIC) {
+            return null;
+        }
+        try {
+            Class<?> dataClass = Class.forName("mekceumoremachine.common.upgrade.FirstChemicalInfuserUpgradeData");
+            Object[] arguments = {
+                  tier,
+                  tile,
+                  getPublicField(tile, "clientEnergyUsed"),
+                  getPublicField(tile, "prevEnergy"),
+                  getPublicField(tile, "configComponent"),
+                  getPublicField(tile, "ejectorComponent"),
+                  getPublicField(tile, "leftTank"),
+                  getPublicField(tile, "rightTank"),
+                  getPublicField(tile, "centerTank")
+            };
+            for (java.lang.reflect.Constructor<?> constructor : dataClass.getConstructors()) {
+                if (constructor.getParameterTypes().length == arguments.length) {
+                    Object data = constructor.newInstance(arguments);
+                    if (data instanceof IUpgradeData) {
+                        return (IUpgradeData) data;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            MekConfigCardUpgradesMod.LOGGER.warn("Unable to create MoreMachine chemical infuser upgrade data", e);
+        }
+        return null;
+    }
+
+    private static IBlockState getFirstChemicalInfuserUpgradeResult(TileEntity tile, BaseTier tier) {
+        if (!isNormalChemicalInfuser(tile) || tier != BaseTier.BASIC) {
+            return null;
+        }
+        try {
+            Class<?> blocksClass = Class.forName("mekceumoremachine.common.registries.MEKCeuMoreMachineBlocks");
+            Object block = blocksClass.getField("TierChemicalInfuser").get(null);
+            return (IBlockState) net.minecraft.block.Block.class.getMethod("getDefaultState").invoke(block);
+        } catch (Exception e) {
+            MekConfigCardUpgradesMod.LOGGER.warn("Unable to find MoreMachine chemical infuser block", e);
+            return null;
+        }
+    }
+
+    private static Object getPublicField(Object object, String fieldName) throws ReflectiveOperationException {
+        return object.getClass().getField(fieldName).get(object);
     }
 
     private static Object findTileUpgradeAdapter(TileEntity tile) {
