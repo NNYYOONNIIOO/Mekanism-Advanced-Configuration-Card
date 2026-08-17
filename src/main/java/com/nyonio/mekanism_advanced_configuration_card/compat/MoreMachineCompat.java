@@ -23,6 +23,7 @@ public class MoreMachineCompat {
     private static boolean moreMachineLoaded = false;
     private static Class<?> needRepeatTierUpgradeClass;
     private static Class<?> tierMachineClass;
+    private static boolean adapterRegistrationAttempted;
     
     public static void init() {
         moreMachineLoaded = Loader.isModLoaded(MOD_ID);
@@ -172,7 +173,18 @@ public class MoreMachineCompat {
         try {
             Class<?> registry = Class.forName("mekanism.common.upgrade.TileUpgradeRegistry");
             Method find = registry.getMethod("find", TileEntity.class);
-            return find.invoke(null, tile);
+            Object adapter = find.invoke(null, tile);
+            if (adapter == null && !adapterRegistrationAttempted) {
+                adapterRegistrationAttempted = true;
+                try {
+                    Class<?> adapters = Class.forName("mekceumoremachine.common.upgrade.MoreMachineTileUpgradeAdapters");
+                    adapters.getMethod("register").invoke(null);
+                } catch (Exception e) {
+                    MekConfigCardUpgradesMod.LOGGER.warn("Unable to register MoreMachine tile upgrade adapters", e);
+                }
+                adapter = find.invoke(null, tile);
+            }
+            return adapter;
         } catch (Exception e) {
             return null;
         }
@@ -183,7 +195,13 @@ public class MoreMachineCompat {
             return null;
         }
         try {
-            Method method = adapter.getClass().getMethod(methodName, BaseTier.class);
+            Method method;
+            try {
+                method = adapter.getClass().getMethod(methodName, BaseTier.class);
+            } catch (NoSuchMethodException e) {
+                method = adapter.getClass().getDeclaredMethod(methodName, BaseTier.class);
+                method.setAccessible(true);
+            }
             return method.invoke(adapter, tier);
         } catch (Exception e) {
             return null;

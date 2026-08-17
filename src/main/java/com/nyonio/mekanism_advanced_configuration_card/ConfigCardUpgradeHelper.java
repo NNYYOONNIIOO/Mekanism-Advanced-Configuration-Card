@@ -310,7 +310,8 @@ public final class ConfigCardUpgradeHelper {
             }
         }
         
-        if (!isConfigurationCompatible(tile, storedType, data)) {
+        if (!isConfigurationCompatible(tile, storedType, data)
+              && !MoreMachineCompat.canConvertToMoreMachine(storedType, tile)) {
             return mekanism.common.util.LangUtils.localize("message.mekanism_advanced_configuration_card.type_mismatch");
         }
         IUpgradeTile upgradeTile = null;
