@@ -69,14 +69,15 @@ public class MoreMachineCompat {
         if (storedType == null || targetTile == null) {
             return false;
         }
-        boolean storedIsMoreMachine = storedType.getName().startsWith("mekceumoremachine.");
-        boolean targetIsMoreMachine = targetTile.getClass().getName().startsWith("mekceumoremachine.");
-        if (storedIsMoreMachine == targetIsMoreMachine) {
-            return false;
-        }
         String storedFamily = getMachineFamily(storedType);
         String targetFamily = getMachineFamily(targetTile.getClass());
-        return storedFamily != null && storedFamily.equals(targetFamily);
+        if (storedFamily == null || !storedFamily.equals(targetFamily)) {
+            return false;
+        }
+        return storedType.getName().startsWith("mekanism.")
+              || storedType.getName().startsWith("mekceumoremachine.")
+              || targetTile.getClass().getName().startsWith("mekanism.")
+              || targetTile.getClass().getName().startsWith("mekceumoremachine.");
     }
 
     private static String getMachineFamily(Class<?> tileClass) {
@@ -173,8 +174,7 @@ public class MoreMachineCompat {
         try {
             Class<?> registry = Class.forName("mekanism.common.upgrade.TileUpgradeRegistry");
             Method find = registry.getMethod("find", TileEntity.class);
-            Object adapter = find.invoke(null, tile);
-            if (adapter == null && !adapterRegistrationAttempted) {
+            if (!adapterRegistrationAttempted) {
                 adapterRegistrationAttempted = true;
                 try {
                     Class<?> adapters = Class.forName("mekceumoremachine.common.upgrade.MoreMachineTileUpgradeAdapters");
@@ -182,9 +182,8 @@ public class MoreMachineCompat {
                 } catch (Exception e) {
                     MekConfigCardUpgradesMod.LOGGER.warn("Unable to register MoreMachine tile upgrade adapters", e);
                 }
-                adapter = find.invoke(null, tile);
             }
-            return adapter;
+            return find.invoke(null, tile);
         } catch (Exception e) {
             return null;
         }
@@ -200,8 +199,8 @@ public class MoreMachineCompat {
                 method = adapter.getClass().getMethod(methodName, BaseTier.class);
             } catch (NoSuchMethodException e) {
                 method = adapter.getClass().getDeclaredMethod(methodName, BaseTier.class);
-                method.setAccessible(true);
             }
+            method.setAccessible(true);
             return method.invoke(adapter, tier);
         } catch (Exception e) {
             return null;
